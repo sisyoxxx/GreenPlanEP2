@@ -1,0 +1,1 @@
+import{A as t}from"./AppLayout-DFr5aBKB.js";import{d as o,c as s,w as r,o as n,b as e}from"./index-D00Oqr2v.js";const i=o({__name:"CartView",setup(p){return(l,a)=>(n(),s(t,null,{default:r(()=>[...a[0]||(a[0]=[e("div",{class:"page"},[e("h1",null,"购物车页面"),e("p",null,"当前核心购物车能力已集成在买家首页，可在此页扩展优惠券、地址、结算拆分。")],-1)])]),_:1}))}});export{i as default};
