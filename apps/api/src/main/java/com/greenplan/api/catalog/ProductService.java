@@ -25,9 +25,15 @@ public class ProductService {
                 .toList();
     }
 
+    public List<ProductDto> listAll() {
+        return productRepository.findAll().stream()
+                .map(this::toDto)
+                .toList();
+    }
+
     public ProductDto getById(Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("商品不存在"));
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
         return toDto(product);
     }
 
@@ -47,7 +53,7 @@ public class ProductService {
 
         InventoryItem item = new InventoryItem();
         item.setProduct(saved);
-        item.setOnlineStock(request.initialStock() == null ? 0 : request.initialStock());
+        item.setOnlineStock(request.initialStock() == null ? 0 : Math.max(0, request.initialStock()));
         item.setWarningThreshold(5);
         inventoryItemRepository.save(item);
 
@@ -57,7 +63,7 @@ public class ProductService {
     @Transactional
     public ProductDto update(Long id, ProductUpsertRequest request) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("商品不存在"));
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
         product.setSku(request.sku());
         product.setName(request.name());
         product.setDescription(request.description());
@@ -67,13 +73,26 @@ public class ProductService {
         product.setSuitableRegion(request.suitableRegion());
         product.setImageUrl(request.imageUrl());
         Product saved = productRepository.save(product);
+
+        if (request.initialStock() != null) {
+            InventoryItem inventory = inventoryItemRepository.findByProductId(saved.getId())
+                    .orElseGet(() -> {
+                        InventoryItem item = new InventoryItem();
+                        item.setProduct(saved);
+                        item.setWarningThreshold(5);
+                        return item;
+                    });
+            inventory.setOnlineStock(Math.max(0, request.initialStock()));
+            inventoryItemRepository.save(inventory);
+        }
+
         return toDto(saved);
     }
 
     @Transactional
     public void updateStatus(Long id, String status) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("商品不存在"));
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
         product.setStatus(status);
         productRepository.save(product);
     }

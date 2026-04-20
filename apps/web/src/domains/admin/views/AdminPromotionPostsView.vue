@@ -1,149 +1,421 @@
 <template>
   <AdminLayout>
-    <h2 class="page-title">推广文章管理</h2>
+    <section class="page-head">
+      <div>
+        <h2 class="page-title">推广文章</h2>
+        <p class="page-desc">支持发布、编辑、删除，并可上传配图用于活动展示。</p>
+      </div>
+      <button class="secondary-btn" @click="loadData" :disabled="loading">
+        {{ loading ? '刷新中...' : '刷新列表' }}
+      </button>
+    </section>
 
-    <!-- 发布表单 -->
-    <div v-if="showForm" class="post-form page-lite">
-      <div class="form-layout">
-        <div class="form-left">
-          <input v-model="form.title" placeholder="文章标题" />
-          <textarea v-model="form.content" placeholder="文章内容..." rows="4"></textarea>
-          <div class="form-actions">
-            <button @click="publishPost">{{ editingId ? '保存修改' : '发布' }}</button>
-            <button class="secondary-btn" @click="cancelForm">取消</button>
-          </div>
-        </div>
-        <div class="form-right">
-          <label class="image-upload-label">
-            <input type="file" accept="image/*" @change="handleImageUpload" />
-            <div class="image-upload-box">
-              <div v-if="form.imagePreview" class="image-preview">{{ form.imagePreview }}</div>
-              <div v-else class="image-placeholder">
-                <span class="upload-icon">📷</span>
-                <span class="upload-text">上传图片</span>
-              </div>
-            </div>
+    <section class="page-lite editor-card">
+      <h3>{{ editingId ? '编辑推广文章' : '新增推广文章' }}</h3>
+
+      <select v-model.number="form.promotionId">
+        <option :value="0" disabled>请选择关联促销位</option>
+        <option v-for="item in promotions" :key="item.id" :value="item.id">{{ item.title }}</option>
+      </select>
+
+      <select v-model="form.channel">
+        <option value="community">社区</option>
+        <option value="home">首页位</option>
+        <option value="product">商品页位</option>
+      </select>
+
+      <textarea v-model.trim="form.content" rows="4" placeholder="请输入推广内容"></textarea>
+
+      <div class="image-field">
+        <p class="field-label">配图（可选）</p>
+        <div class="image-row">
+          <label class="secondary-btn file-btn">
+            上传图片
+            <input type="file" accept="image/*" @change="onImageChange" />
           </label>
+          <button class="secondary-btn" type="button" @click="clearImage" :disabled="!form.imageUrl">移除图片</button>
         </div>
+        <img v-if="form.imageUrl" class="preview-image" :src="form.imageUrl" alt="promotion image" />
       </div>
-    </div>
-    <button v-else class="add-btn" @click="showForm = true">+ 发布推广文章</button>
 
-    <!-- 文章列表 -->
-    <div v-if="posts.length === 0" class="empty-state page-lite">
-      <p class="empty-hint">暂无推广文章</p>
-    </div>
-    <div v-else class="post-list">
-      <div class="post-card page-lite" v-for="item in posts" :key="item.id">
-        <div class="post-main">
-          <div class="post-header">
-            <div>
-              <h3 class="post-title">{{ item.title }}</h3>
-              <span class="official-badge">官方</span>
-            </div>
-            <span class="post-date">{{ item.date }}</span>
-          </div>
-          <p class="post-content">{{ item.content }}</p>
-          <div class="post-actions">
-            <button class="text-link" @click="editPost(item)">编辑</button>
-            <button class="text-link del" @click="deletePost(item)">删除</button>
-          </div>
-        </div>
-        <div v-if="item.imageUrl" class="post-image">{{ item.imageUrl }}</div>
+      <div class="form-actions">
+        <button @click="submitPost" :disabled="submitting">
+          {{ submitting ? '提交中...' : editingId ? '保存修改' : '发布推广文案' }}
+        </button>
+        <button class="secondary-btn" @click="resetForm" :disabled="submitting">清空</button>
+        <button v-if="editingId" class="secondary-btn" @click="cancelEdit" :disabled="submitting">取消编辑</button>
       </div>
-    </div>
+      <p v-if="message" class="message">{{ message }}</p>
+    </section>
+
+    <section class="page-lite table-card">
+      <div class="table-head">
+        <h3>推广文章列表</h3>
+        <span class="count-chip">{{ filteredPosts.length }} / {{ posts.length }} 条</span>
+      </div>
+
+      <div class="table-filters">
+        <input v-model.trim="filterKeyword" type="text" placeholder="搜索推广内容或促销位标题" />
+        <select v-model="filterChannel">
+          <option value="all">全部渠道</option>
+          <option value="community">社区</option>
+          <option value="home">首页位</option>
+          <option value="product">商品页位</option>
+        </select>
+      </div>
+
+      <div v-if="loading && posts.length === 0" class="empty-state">推广文章加载中...</div>
+      <div v-else-if="error" class="empty-state error">{{ error }}</div>
+      <div v-else-if="filteredPosts.length === 0" class="empty-state">暂无匹配的推广文章</div>
+
+      <div v-else class="card-list">
+        <article v-for="item in filteredPosts" :key="item.id" class="post-card">
+          <div class="post-meta">
+            <span class="channel-chip">{{ channelLabelMap[item.channel] || item.channel }}</span>
+            <span>{{ promotionTitleMap[item.promotionId] || `促销位 #${item.promotionId}` }}</span>
+            <span>{{ formatDateTime(item.publishedAt || item.createdAt) }}</span>
+          </div>
+
+          <img v-if="item.imageUrl" class="post-image" :src="item.imageUrl" alt="post image" />
+          <p class="post-content">{{ item.content }}</p>
+
+          <div class="post-actions">
+            <button class="secondary-btn" @click="startEdit(item)">编辑</button>
+            <button class="secondary-btn danger-btn" :disabled="deletingId === item.id" @click="removePost(item)">
+              {{ deletingId === item.id ? '删除中...' : '删除' }}
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
   </AdminLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import AdminLayout from '../../../layouts/AdminLayout.vue'
+import {
+  createPromotionPost,
+  deletePromotionPost,
+  fetchPromotionPosts,
+  fetchPromotions,
+  updatePromotionPost,
+  type AdminPromotion,
+  type AdminPromotionPost
+} from '../api'
 
-const showForm = ref(false)
+const loading = ref(false)
+const submitting = ref(false)
+const deletingId = ref<number | null>(null)
 const editingId = ref<number | null>(null)
-const form = reactive({ title: '', content: '', imageUrl: '', imagePreview: '' })
+const error = ref('')
+const message = ref('')
+const posts = ref<AdminPromotionPost[]>([])
+const promotions = ref<AdminPromotion[]>([])
+const filterKeyword = ref('')
+const filterChannel = ref('all')
 
-const posts = ref([
-  { id: 1, title: '春季种植指南', content: '春季是种植的黄金季节，选择合适的种子和工具能事半功倍。我们为您精选了最适合春季种植的产品组合。', imageUrl: 'spring-guide.jpg', date: '2026-04-10' },
-  { id: 2, title: '阳台种菜新手入门', content: '没有花园也能种菜！阳台种菜只需要简单的工具和正确的方法。本文详细介绍了如何在阳台上成功种植蔬菜。', imageUrl: 'balcony-veg.jpg', date: '2026-04-08' }
-])
+const form = reactive({
+  promotionId: 0,
+  channel: 'community',
+  content: '',
+  imageUrl: '' as string
+})
 
-let nextId = 3
-
-function publishPost() {
-  if (!form.title || !form.content) return
-  if (editingId.value) {
-    const item = posts.value.find(x => x.id === editingId.value)
-    if (item) { item.title = form.title; item.content = form.content; item.imageUrl = form.imageUrl }
-  } else {
-    posts.value.unshift({ id: nextId++, title: form.title, content: form.content, imageUrl: form.imageUrl, date: new Date().toISOString().slice(0, 10) })
-  }
-  cancelForm()
+const channelLabelMap: Record<string, string> = {
+  community: '社区',
+  home: '首页位',
+  product: '商品页位'
 }
 
-function editPost(item: any) {
-  editingId.value = item.id; form.title = item.title; form.content = item.content; form.imageUrl = item.imageUrl; showForm.value = true
-}
+const promotionTitleMap = ref<Record<number, string>>({})
 
-function cancelForm() {
-  showForm.value = false; editingId.value = null; form.title = ''; form.content = ''; form.imageUrl = ''; form.imagePreview = ''
-}
+const filteredPosts = computed(() => {
+  const keyword = filterKeyword.value.trim().toLowerCase()
+  return posts.value.filter((item) => {
+    const byChannel = filterChannel.value === 'all' || item.channel === filterChannel.value
+    if (!byChannel) return false
+    if (!keyword) return true
+    const promotionTitle = promotionTitleMap.value[item.promotionId] || ''
+    return item.content.toLowerCase().includes(keyword) || promotionTitle.toLowerCase().includes(keyword)
+  })
+})
 
-function deletePost(item: any) { posts.value = posts.value.filter(x => x.id !== item.id) }
+onMounted(() => {
+  loadData()
+})
 
-function handleImageUpload(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (file) {
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      form.imagePreview = event.target?.result as string
+async function loadData() {
+  loading.value = true
+  error.value = ''
+
+  try {
+    const [promotionList, postList] = await Promise.all([fetchPromotions(), fetchPromotionPosts()])
+    promotions.value = promotionList
+    posts.value = postList
+    promotionTitleMap.value = Object.fromEntries(promotionList.map((item) => [item.id, item.title]))
+    if (!form.promotionId && promotionList.length > 0) {
+      form.promotionId = promotionList[0].id
     }
-    reader.readAsDataURL(file)
+  } catch (err: any) {
+    error.value = err?.response?.data?.message || '推广文章数据加载失败'
+  } finally {
+    loading.value = false
   }
+}
+
+async function submitPost() {
+  message.value = ''
+  if (!form.promotionId || !form.content) {
+    message.value = '请先选择促销位并填写推广内容'
+    return
+  }
+
+  submitting.value = true
+  try {
+    const payload = {
+      promotionId: form.promotionId,
+      channel: form.channel,
+      content: form.content,
+      imageUrl: form.imageUrl || null
+    }
+
+    if (editingId.value) {
+      await updatePromotionPost(editingId.value, payload)
+      message.value = '推广文章已更新'
+    } else {
+      await createPromotionPost(payload)
+      message.value = '推广文章已发布'
+    }
+
+    resetForm()
+    await loadData()
+  } catch (err: any) {
+    message.value = err?.response?.data?.message || (editingId.value ? '推广文章更新失败' : '推广文章发布失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+function startEdit(item: AdminPromotionPost) {
+  editingId.value = item.id
+  form.promotionId = item.promotionId
+  form.channel = normalizeChannel(item.channel)
+  form.content = item.content
+  form.imageUrl = item.imageUrl || ''
+  message.value = '已载入编辑内容'
+}
+
+function cancelEdit() {
+  resetForm()
+  message.value = '已取消编辑'
+}
+
+async function removePost(item: AdminPromotionPost) {
+  if (!confirm(`确认删除该推广文章？\n\n${item.content.slice(0, 36)}${item.content.length > 36 ? '...' : ''}`)) return
+  deletingId.value = item.id
+  message.value = ''
+  try {
+    await deletePromotionPost(item.id)
+    if (editingId.value === item.id) resetForm()
+    message.value = '推广文章已删除'
+    await loadData()
+  } catch (err: any) {
+    message.value = err?.response?.data?.message || '推广文章删除失败'
+  } finally {
+    deletingId.value = null
+  }
+}
+
+function resetForm() {
+  editingId.value = null
+  form.content = ''
+  form.channel = 'community'
+  form.imageUrl = ''
+  form.promotionId = promotions.value[0]?.id || 0
+}
+
+function clearImage() {
+  form.imageUrl = ''
+}
+
+function onImageChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    form.imageUrl = String(reader.result || '')
+  }
+  reader.readAsDataURL(file)
+}
+
+function normalizeChannel(value: string) {
+  const channel = (value || '').trim().toLowerCase()
+  if (channel === 'community' || channel === 'home' || channel === 'product') return channel
+  return 'community'
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) return '未记录'
+  return value.replace('T', ' ').slice(0, 16)
 }
 </script>
 
 <style scoped>
-.page-title { margin: 0 0 14px; font-size: 22px; color: #1f2937; }
-.add-btn { padding: 8px 18px; border-radius: 8px; border: none; background: #80ab64; color: #fff; font-size: 14px; cursor: pointer; margin-bottom: 14px; }
-.add-btn:hover { background: #6e9a55; }
+.page-head,
+.editor-card,
+.table-card {
+  display: grid;
+  gap: 14px;
+}
 
-.post-form { display: grid; gap: 10px; margin-bottom: 14px; }
-.post-form textarea { resize: vertical; }
-.form-layout { display: grid; grid-template-columns: 1fr 180px; gap: 16px; }
-.form-left { display: grid; gap: 10px; }
-.form-right { display: flex; justify-content: center; }
-.form-actions { display: flex; gap: 8px; }
+.page-head {
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  margin-bottom: 14px;
+}
 
-.image-upload-label { cursor: pointer; }
-.image-upload-label input { display: none; }
-.image-upload-box { width: 180px; height: 180px; border: 2px dashed #d3d7de; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-.image-upload-box:hover { border-color: #80ab64; background: #f9fdfb; }
-.image-placeholder { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.upload-icon { font-size: 32px; }
-.upload-text { font-size: 12px; color: #9ca3af; }
-.image-preview { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; background-size: cover; background-position: center; }
+.page-title {
+  margin: 0;
+  font-size: 22px;
+  color: #1f2937;
+}
 
-.post-list { display: grid; gap: 12px; }
-.post-card { display: grid; grid-template-columns: 1fr 120px; gap: 16px; align-items: stretch; }
+.page-desc {
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
 
-.post-main { display: grid; gap: 10px; }
+.table-head,
+.form-actions,
+.post-actions,
+.image-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
-.post-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.post-header > div { display: flex; align-items: center; gap: 8px; }
-.post-title { margin: 0; font-size: 16px; color: #1f2937; }
-.official-badge { display: inline-block; padding: 2px 8px; background: #fef3c7; color: #92400e; border-radius: 4px; font-size: 11px; font-weight: 600; }
-.post-date { font-size: 12px; color: #9ca3af; }
+.table-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
-.post-content { margin: 0; font-size: 14px; color: #4b5563; line-height: 1.6; }
+.table-filters input {
+  min-width: 260px;
+  flex: 1;
+}
 
-.post-image { width: 120px; height: 100%; min-height: 100px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #9ca3af; text-align: center; padding: 8px; word-break: break-word; }
+.count-chip,
+.channel-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #edf9ef;
+  color: #1f7a41;
+  font-size: 12px;
+  font-weight: 700;
+}
 
-.post-actions { display: flex; gap: 8px; }
-.text-link { background: transparent; color: #1f7a41; border: none; padding: 2px 6px; font-size: 13px; cursor: pointer; }
-.text-link:hover { text-decoration: underline; }
-.text-link.del { color: #dc2626; }
+.card-list {
+  display: grid;
+  gap: 12px;
+}
 
-.empty-state { text-align: center; padding: 30px; }
-.empty-hint { color: #9ca3af; margin: 0; }
+.post-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #e5eee7;
+  background: #fbfdfb;
+}
+
+.post-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.post-image,
+.preview-image {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 12px;
+  border: 1px solid #e3ece5;
+  object-fit: cover;
+}
+
+.preview-image {
+  max-height: 200px;
+}
+
+.post-image {
+  max-height: 180px;
+}
+
+.post-content {
+  margin: 0;
+  color: #374151;
+  line-height: 1.7;
+}
+
+.file-btn {
+  position: relative;
+  cursor: pointer;
+}
+
+.file-btn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.field-label {
+  margin: 0;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.image-field {
+  display: grid;
+  gap: 10px;
+}
+
+.empty-state {
+  padding: 28px 10px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.error {
+  color: #dc2626;
+}
+
+.message {
+  margin: 0;
+  color: #1f7a41;
+  font-weight: 600;
+}
+
+.secondary-btn {
+  background: #f2f6f2;
+  border: 1px solid #e3e8e3;
+  color: #1f2937;
+}
+
+.danger-btn {
+  border-color: #f2cbcb;
+  color: #b42318;
+  background: #fff7f7;
+}
 </style>
