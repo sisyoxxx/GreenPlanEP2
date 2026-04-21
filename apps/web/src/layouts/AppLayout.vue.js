@@ -2,8 +2,11 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import AppHeader from '../shared/components/AppHeader.vue';
 const route = useRoute();
-const publicHeaderRoutes = ['/', '/login', '/profile', '/products', '/tutorial', '/planting-records', '/community'];
-const showHeader = computed(() => publicHeaderRoutes.includes(route.path) || route.path.startsWith('/products/'));
+const publicHeaderRoutes = ['/', '/login', '/profile', '/favorites', '/products', '/tutorial', '/planting-records', '/community', '/orders', '/cart'];
+const showHeader = computed(() => publicHeaderRoutes.includes(route.path) ||
+    route.path.startsWith('/products/') ||
+    route.path.startsWith('/admin') ||
+    route.path.startsWith('/inventory'));
 debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;

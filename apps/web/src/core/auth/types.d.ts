@@ -7,6 +7,8 @@ export interface UserProfile {
     id: number;
     username: string;
     role: Role;
+    nickname?: string | null;
+    avatarDataUrl?: string | null;
 }
 export interface AuthResponse {
     accessToken: string;

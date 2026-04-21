@@ -25,6 +25,19 @@ public class User {
     @Column(name = "role_code", nullable = false, length = 32)
     private RoleCode roleCode;
 
+    @Column(length = 64)
+    private String nickname;
+
+    @Column(length = 16)
+    private String gender;
+
+    @Column(length = 32)
+    private String phone;
+
+    @Lob
+    @Column(name = "avatar_data_url", columnDefinition = "MEDIUMTEXT")
+    private String avatarDataUrl;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 

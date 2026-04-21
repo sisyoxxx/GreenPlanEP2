@@ -2,20 +2,27 @@
   <aside class="home-sidebar left-sidebar page-lite">
     <section class="sidebar-section">
       <h3 class="sidebar-title">商品分类</h3>
-      <ul class="sidebar-list sidebar-grid-list">
-        <li v-for="item in categories" :key="item.name" class="sidebar-list-item sidebar-grid-item">
-          <span class="sidebar-icon">{{ item.icon }}</span>
+
+      <div class="sidebar-list sidebar-grid-list">
+        <button
+          v-for="item in BUYER_CATEGORY_DEFINITIONS"
+          :key="item.label"
+          type="button"
+          class="sidebar-list-item sidebar-grid-item sidebar-grid-button"
+          @click="goCategory(item.label)"
+        >
+          <span class="sidebar-icon" aria-hidden="true">{{ item.icon }}</span>
           <div class="sidebar-grid-text">
-            <div class="sidebar-item-title">{{ item.name }}</div>
+            <div class="sidebar-item-title">{{ item.label }}</div>
             <div class="sidebar-item-desc">{{ item.desc }}</div>
           </div>
-        </li>
-      </ul>
+        </button>
+      </div>
     </section>
 
     <section class="sidebar-section">
       <h3 class="sidebar-title">贴心服务</h3>
-      <div class="mini-service-card" v-for="service in services" :key="service.title">
+      <div v-for="service in services" :key="service.title" class="mini-service-card">
         <div class="sidebar-item-title">{{ service.title }}</div>
         <div class="sidebar-item-desc">{{ service.desc }}</div>
       </div>
@@ -24,18 +31,22 @@
 </template>
 
 <script setup lang="ts">
-const categories = [
-  { icon: '🌱', name: '蔬菜种子', desc: '阳台与庭院种植' },
-  { icon: '🌸', name: '花卉种子', desc: '观赏与四季花园' },
-  { icon: '🪴', name: '盆栽绿植', desc: '室内净化与观叶' },
-  { icon: '🧰', name: '种植工具', desc: '育苗、浇灌、修剪' },
-  { icon: '🍀', name: '营养肥料', desc: '土壤、肥料与营养液' }
-]
+import { useRouter } from 'vue-router'
+import { BUYER_CATEGORY_DEFINITIONS } from '../categoryConfig'
+
+const router = useRouter()
 
 const services = [
-  { title: '种植新手指引', desc: '从播种到养护的完整说明' },
-  { title: '季节推荐', desc: '根据时令推荐适宜种植的品类' }
+  { title: '新手指引', desc: '从播种、浇水到养护节奏，帮你快速上手。' },
+  { title: '时令推荐', desc: '根据当前适播季节挑选更适合的商品。' }
 ]
+
+function goCategory(category: string) {
+  router.push({
+    path: '/products',
+    query: { category }
+  })
+}
 </script>
 
 <style scoped>
@@ -56,7 +67,6 @@ const services = [
 }
 
 .sidebar-list {
-  list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
@@ -78,11 +88,23 @@ const services = [
   border: 1px solid #e4efe6;
 }
 
+.sidebar-grid-button {
+  width: 100%;
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.sidebar-grid-button:hover {
+  transform: translateY(-1px);
+  border-color: #bfdcc7;
+  box-shadow: 0 8px 18px rgba(31, 122, 65, 0.08);
+}
+
 .sidebar-grid-item {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  min-height: 92px;
+  min-height: 96px;
 }
 
 .sidebar-grid-text {
@@ -91,7 +113,7 @@ const services = [
 }
 
 .sidebar-icon {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .sidebar-item-title {
@@ -103,6 +125,7 @@ const services = [
   font-size: 13px;
   color: #6b7280;
   margin-top: 4px;
+  line-height: 1.55;
 }
 
 @media (max-width: 1280px) {

@@ -1,1 +1,0 @@
-import{I as t}from"./index-D00Oqr2v.js";async function e(){return(await t.get("/api/products")).data}async function s(r){return t.post("/api/orders",{items:r})}async function c(){return(await t.get("/api/orders/me")).data}export{c as a,s as c,e as f};

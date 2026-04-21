@@ -2,103 +2,136 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AppLayout from '../../../layouts/AppLayout.vue';
 import { useAuthStore } from '../../../core/auth/useAuthStore';
-import { createOrder, fetchProducts } from '../api';
 import HomeCategorySidebar from '../components/HomeCategorySidebar.vue';
 import HomeRecommendationRail from '../components/HomeRecommendationRail.vue';
+import { normalizeBuyerCategory } from '../categoryConfig';
+import { useBuyerCartStore } from '../stores/useBuyerCartStore';
+import { fetchProducts, fetchPromotions, fetchTutorials } from '../api';
 const router = useRouter();
 const auth = useAuthStore();
+const cartStore = useBuyerCartStore();
 const products = ref([]);
-const cart = ref([]);
+const tutorials = ref([]);
+const promotions = ref([]);
 const message = ref('');
-const tutorials = [
-    { title: '播种前的种子处理方法', desc: '了解浸种、催芽与播前准备。' },
-    { title: '家庭阳台种植光照指南', desc: '不同作物需要的光照强度与摆放建议。' },
-    { title: '浇水频率怎么判断', desc: '避免积水烂根和长期缺水。' },
-    { title: '新手营养肥料搭配技巧', desc: '肥料比例与盆栽通气性建议。' },
-    { title: '幼苗期常见问题排查', desc: '徒长、黄叶、倒伏的处理思路。' },
-    { title: '家庭病虫害预防方案', desc: '低风险、易上手的园艺防护方法。' },
-    { title: '四季适合播种的品种', desc: '按季节筛选更容易成功的作物。' }
-];
-const communityPosts = [
-    { title: '番茄从发芽到开花记录', desc: '分享阳台番茄完整生长过程。' },
-    { title: '如何让薄荷长得更旺盛', desc: '社区热议的修剪与浇水经验。' },
-    { title: '春季阳台花园布置灵感', desc: '适合小空间的花卉搭配方案。' },
-    { title: '新手入门买哪些工具', desc: '大家推荐的实用园艺工具清单。' },
-    { title: '我家的草莓终于结果了', desc: '从播种到采收的经验总结。' },
-    { title: '家庭堆肥小技巧', desc: '厨余再利用与土壤改良心得。' },
-    { title: '夏季浇水避坑经验', desc: '高温阶段如何减少闷根与蒸腾损伤。' },
-    { title: '香草植物适合厨房窗边吗', desc: '关于罗勒、迷迭香、薄荷的讨论。' }
-];
-const totalCardCount = computed(() => products.value.length + tutorials.length + communityPosts.length);
-onMounted(async () => {
-    products.value = (await fetchProducts()).slice(0, 8);
+const topProducts = computed(() => products.value.slice(0, 6));
+const topTutorials = computed(() => tutorials.value.slice(0, 6));
+const homePromotions = computed(() => promotions.value.filter((item) => item.strategyType === 'home'));
+const leadPromotion = computed(() => homePromotions.value[0] || null);
+const heroTag = computed(() => leadPromotion.value?.title || '新人推荐 · 春播季');
+const heroTitle = computed(() => '家庭种植商品与园艺灵感一站式选购');
+const heroSubtitle = computed(() => {
+    if (leadPromotion.value?.description)
+        return leadPromotion.value.description;
+    return '点击左侧分类可快速筛选商品，加入购物车后可在购物车页统一下单。';
 });
+const highlightLabel = computed(() => {
+    if (leadPromotion.value)
+        return '首页促销位';
+    return topProducts.value.length > 0 ? '本周热销' : '本周精选教程';
+});
+const highlightTitle = computed(() => {
+    if (leadPromotion.value)
+        return leadPromotion.value.title;
+    if (topProducts.value.length > 0)
+        return topProducts.value[0]?.name || '家庭种植推荐';
+    return topTutorials.value[0]?.title || '阳台种植入门教程';
+});
+const highlightDesc = computed(() => {
+    if (leadPromotion.value?.description)
+        return leadPromotion.value.description;
+    if (topProducts.value.length > 0)
+        return topProducts.value[0]?.description || '从分类筛选到购物车下单，流程更顺手。';
+    return topTutorials.value[0]?.description || '先看教程再上手，适合新手快速入门。';
+});
+function formatDuration(durationMinutes) {
+    return durationMinutes ? `${durationMinutes} 分钟` : '图文教程';
+}
+function formatPrice(value) {
+    return Number(value).toFixed(2);
+}
+function hasDisplayImage(url) {
+    if (!url)
+        return false;
+    return /^https?:\/\//i.test(url);
+}
+onMounted(async () => {
+    await Promise.all([reloadProducts(), reloadTutorials(), reloadPromotions()]);
+});
+async function reloadProducts() {
+    try {
+        products.value = (await fetchProducts()) || [];
+        products.value.forEach((item) => cartStore.syncProduct(item));
+    }
+    catch (err) {
+        message.value = err?.response?.data?.message || '加载商品失败';
+    }
+}
+async function reloadTutorials() {
+    try {
+        const res = await fetchTutorials();
+        tutorials.value = res.tutorials || [];
+    }
+    catch (err) {
+        if (!message.value) {
+            message.value = err?.response?.data?.message || '加载教程失败';
+        }
+    }
+}
+async function reloadPromotions() {
+    try {
+        promotions.value = await fetchPromotions();
+    }
+    catch (err) {
+        if (!message.value) {
+            message.value = err?.response?.data?.message || '加载促销位失败';
+        }
+    }
+}
 function goProducts() {
     router.push('/products');
-}
-function goTutorial() {
-    router.push('/tutorial');
 }
 function goCommunity() {
     router.push('/community');
 }
-function requireBuyerLogin(actionText) {
-    if (!auth.isLoggedIn || auth.role !== 'BUYER') {
-        message.value = `${actionText}前请先登录买家账号`;
-        router.push('/login');
-        return false;
-    }
-    return true;
+function goTutorials() {
+    router.push('/tutorial');
+}
+function goProductDetail(id) {
+    router.push(`/products/${id}`);
+}
+function goCart() {
+    router.push('/cart');
 }
 function addToCart(item) {
-    if (!requireBuyerLogin('加入购物车'))
+    if (!auth.isLoggedIn || auth.role !== 'BUYER') {
+        message.value = '加入购物车前请先登录买家账户。';
+        router.push('/login');
         return;
-    const existed = cart.value.find((c) => c.id === item.id);
-    if (existed)
-        existed.quantity += 1;
-    else
-        cart.value.push({ ...item, quantity: 1 });
-    message.value = `${item.name} 已加入购物车`;
-}
-function clearCart() {
-    cart.value = [];
-    message.value = '购物车已清空';
-}
-async function submitOrder() {
-    if (!requireBuyerLogin('下单'))
-        return;
-    if (cart.value.length === 0)
-        return;
-    const payload = cart.value.map((item) => ({ productId: item.id, quantity: item.quantity }));
-    try {
-        const res = await createOrder(payload);
-        message.value = `下单成功，订单号：${res.data.orderNo}`;
-        cart.value = [];
-        products.value = (await fetchProducts()).slice(0, 8);
     }
-    catch (e) {
-        message.value = e?.response?.data?.message || '下单失败';
-    }
+    cartStore.addItem(item, 1);
+    message.value = `${item.name} 已加入购物车。`;
 }
 debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
+/** @type {__VLS_StyleScopedClasses['home-center']} */ ;
+/** @type {__VLS_StyleScopedClasses['home-center']} */ ;
+/** @type {__VLS_StyleScopedClasses['left-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['hero-content']} */ ;
-/** @type {__VLS_StyleScopedClasses['featured-product']} */ ;
 /** @type {__VLS_StyleScopedClasses['section-head']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['home-shell']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-card-grid']} */ ;
-/** @type {__VLS_StyleScopedClasses['home-shell']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-card-grid']} */ ;
+/** @type {__VLS_StyleScopedClasses['left-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['home-shell']} */ ;
 /** @type {__VLS_StyleScopedClasses['hero-banner']} */ ;
 /** @type {__VLS_StyleScopedClasses['featured-grid']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-strip']} */ ;
 /** @type {__VLS_StyleScopedClasses['home-shell']} */ ;
 /** @type {__VLS_StyleScopedClasses['home-shell']} */ ;
+/** @type {__VLS_StyleScopedClasses['section-head']} */ ;
+/** @type {__VLS_StyleScopedClasses['home-center']} */ ;
+/** @type {__VLS_StyleScopedClasses['left-sidebar']} */ ;
+/** @type {__VLS_StyleScopedClasses['right-sidebar']} */ ;
 // CSS variable injection 
 // CSS variable injection end 
 /** @type {[typeof AppLayout, typeof AppLayout, ]} */ ;
@@ -126,10 +159,13 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
     ...{ class: "hero-tag" },
 });
+(__VLS_ctx.heroTag);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h1, __VLS_intrinsicElements.h1)({});
+(__VLS_ctx.heroTitle);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
     ...{ class: "hero-subtitle" },
 });
+(__VLS_ctx.heroSubtitle);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "hero-actions" },
 });
@@ -149,57 +185,134 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "highlight-label" },
 });
+(__VLS_ctx.highlightLabel);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "highlight-title" },
 });
+(__VLS_ctx.highlightTitle);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "highlight-desc" },
 });
+(__VLS_ctx.highlightDesc);
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "featured-grid" },
+    ...{ class: "section-head" },
 });
-for (const [item] of __VLS_getVForSourceType((__VLS_ctx.products))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-        ...{ class: "featured-product page-lite" },
-        key: (item.id),
-    });
+__VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
+(__VLS_ctx.topProducts.length > 0 ? '精选商品' : '教程卡片');
+__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+    ...{ onClick: (...[$event]) => {
+            __VLS_ctx.topProducts.length > 0 ? __VLS_ctx.goProducts() : __VLS_ctx.goTutorials();
+        } },
+    ...{ class: "secondary-btn" },
+});
+(__VLS_ctx.topProducts.length > 0 ? '查看全部商品' : '查看全部教程');
+if (__VLS_ctx.topProducts.length > 0) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "product-thumb" },
+        ...{ class: "featured-grid" },
     });
-    (item.category);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
-    (item.name);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
-        ...{ class: "product-desc" },
-    });
-    (item.description);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "product-meta" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    (item.price);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-    (item.onlineStock);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "product-actions" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (...[$event]) => {
-                __VLS_ctx.addToCart(item);
-            } },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.goProducts) },
-        ...{ class: "secondary-btn" },
-    });
+    for (const [item] of __VLS_getVForSourceType((__VLS_ctx.topProducts))) {
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+            ...{ onClick: (...[$event]) => {
+                    if (!(__VLS_ctx.topProducts.length > 0))
+                        return;
+                    __VLS_ctx.goProductDetail(item.id);
+                } },
+            key: (item.id),
+            ...{ class: "featured-product page-lite" },
+        });
+        if (__VLS_ctx.hasDisplayImage(item.imageUrl)) {
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.img)({
+                ...{ class: "product-image" },
+                src: (item.imageUrl),
+                alt: (item.name),
+                loading: "lazy",
+            });
+        }
+        else {
+            __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+                ...{ class: "product-thumb" },
+            });
+            (__VLS_ctx.normalizeBuyerCategory(item.category));
+        }
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({
+            ...{ class: "product-title" },
+        });
+        (item.name);
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
+            ...{ class: "product-desc" },
+        });
+        (item.description);
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ class: "product-meta" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+        (__VLS_ctx.formatPrice(item.price));
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+        (item.onlineStock);
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ class: "product-actions" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+            ...{ onClick: (...[$event]) => {
+                    if (!(__VLS_ctx.topProducts.length > 0))
+                        return;
+                    __VLS_ctx.addToCart(item);
+                } },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+            ...{ onClick: (...[$event]) => {
+                    if (!(__VLS_ctx.topProducts.length > 0))
+                        return;
+                    __VLS_ctx.goProductDetail(item.id);
+                } },
+            ...{ class: "secondary-btn" },
+        });
+    }
 }
-if (__VLS_ctx.cart.length > 0) {
+else {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "featured-grid" },
+    });
+    for (const [item] of __VLS_getVForSourceType((__VLS_ctx.topTutorials))) {
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
+            key: (item.id),
+            ...{ class: "featured-product page-lite tutorial-card" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ class: "product-thumb" },
+            ...{ style: ({ background: item.backgroundStyle }) },
+        });
+        (item.tag);
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({
+            ...{ class: "product-title" },
+        });
+        (item.title);
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
+            ...{ class: "product-desc" },
+        });
+        (item.description);
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ class: "product-meta" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+        (item.difficulty || '精选');
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+        (__VLS_ctx.formatDuration(item.durationMinutes));
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ class: "product-actions" },
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+            ...{ onClick: (__VLS_ctx.goTutorials) },
+        });
+    }
+}
+if (!__VLS_ctx.cartStore.isEmpty) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "cart-strip page-lite" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
     __VLS_asFunctionalElement(__VLS_intrinsicElements.strong, __VLS_intrinsicElements.strong)({});
-    (__VLS_ctx.cart.length);
+    (__VLS_ctx.cartStore.uniqueCount);
     __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
         ...{ class: "sidebar-item-desc" },
     });
@@ -207,111 +320,15 @@ if (__VLS_ctx.cart.length > 0) {
         ...{ class: "cart-strip-actions" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.clearCart) },
+        ...{ onClick: (...[$event]) => {
+                if (!(!__VLS_ctx.cartStore.isEmpty))
+                    return;
+                __VLS_ctx.cartStore.clear();
+            } },
         ...{ class: "secondary-btn" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.submitOrder) },
-    });
-}
-__VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElements.section)({
-    ...{ class: "bottom-sections" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "bottom-section page-lite" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "section-head" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.goProducts) },
-    ...{ class: "secondary-btn" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "bottom-card-grid" },
-});
-for (const [item] of __VLS_getVForSourceType((__VLS_ctx.products))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-        ...{ class: "bottom-card" },
-        key: (`product-${item.id}`),
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "bottom-card-tag" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
-    (item.name);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-    (item.description);
-}
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "bottom-section page-lite" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "section-head" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.goTutorial) },
-    ...{ class: "secondary-btn" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "bottom-card-grid" },
-});
-for (const [item] of __VLS_getVForSourceType((__VLS_ctx.tutorials))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-        ...{ class: "bottom-card" },
-        key: (item.title),
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "bottom-card-tag" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
-    (item.title);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-    (item.desc);
-}
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "bottom-section page-lite" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "section-head" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ onClick: (__VLS_ctx.goCommunity) },
-    ...{ class: "secondary-btn" },
-});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "bottom-card-grid" },
-});
-for (const [item] of __VLS_getVForSourceType((__VLS_ctx.communityPosts))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.article, __VLS_intrinsicElements.article)({
-        ...{ class: "bottom-card" },
-        key: (item.title),
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "bottom-card-tag" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({});
-    (item.title);
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({});
-    (item.desc);
-}
-if (__VLS_ctx.totalCardCount > 20) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "overflow-actions page-lite" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.goProducts) },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.goTutorial) },
-        ...{ class: "secondary-btn" },
-    });
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-        ...{ onClick: (__VLS_ctx.goCommunity) },
-        ...{ class: "secondary-btn" },
+        ...{ onClick: (__VLS_ctx.goCart) },
     });
 }
 if (__VLS_ctx.message) {
@@ -339,44 +356,31 @@ var __VLS_2;
 /** @type {__VLS_StyleScopedClasses['highlight-label']} */ ;
 /** @type {__VLS_StyleScopedClasses['highlight-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['highlight-desc']} */ ;
+/** @type {__VLS_StyleScopedClasses['section-head']} */ ;
+/** @type {__VLS_StyleScopedClasses['secondary-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['featured-grid']} */ ;
 /** @type {__VLS_StyleScopedClasses['featured-product']} */ ;
 /** @type {__VLS_StyleScopedClasses['page-lite']} */ ;
+/** @type {__VLS_StyleScopedClasses['product-image']} */ ;
 /** @type {__VLS_StyleScopedClasses['product-thumb']} */ ;
+/** @type {__VLS_StyleScopedClasses['product-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['product-desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['product-meta']} */ ;
 /** @type {__VLS_StyleScopedClasses['product-actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['secondary-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['featured-grid']} */ ;
+/** @type {__VLS_StyleScopedClasses['featured-product']} */ ;
+/** @type {__VLS_StyleScopedClasses['page-lite']} */ ;
+/** @type {__VLS_StyleScopedClasses['tutorial-card']} */ ;
+/** @type {__VLS_StyleScopedClasses['product-thumb']} */ ;
+/** @type {__VLS_StyleScopedClasses['product-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['product-desc']} */ ;
+/** @type {__VLS_StyleScopedClasses['product-meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['product-actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-strip']} */ ;
 /** @type {__VLS_StyleScopedClasses['page-lite']} */ ;
 /** @type {__VLS_StyleScopedClasses['sidebar-item-desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-strip-actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['secondary-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-sections']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-section']} */ ;
-/** @type {__VLS_StyleScopedClasses['page-lite']} */ ;
-/** @type {__VLS_StyleScopedClasses['section-head']} */ ;
-/** @type {__VLS_StyleScopedClasses['secondary-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-card-grid']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-card-tag']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-section']} */ ;
-/** @type {__VLS_StyleScopedClasses['page-lite']} */ ;
-/** @type {__VLS_StyleScopedClasses['section-head']} */ ;
-/** @type {__VLS_StyleScopedClasses['secondary-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-card-grid']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-card-tag']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-section']} */ ;
-/** @type {__VLS_StyleScopedClasses['page-lite']} */ ;
-/** @type {__VLS_StyleScopedClasses['section-head']} */ ;
-/** @type {__VLS_StyleScopedClasses['secondary-btn']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-card-grid']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-card']} */ ;
-/** @type {__VLS_StyleScopedClasses['bottom-card-tag']} */ ;
-/** @type {__VLS_StyleScopedClasses['overflow-actions']} */ ;
-/** @type {__VLS_StyleScopedClasses['page-lite']} */ ;
-/** @type {__VLS_StyleScopedClasses['secondary-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['secondary-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['home-message']} */ ;
 var __VLS_dollars;
@@ -386,18 +390,26 @@ const __VLS_self = (await import('vue')).defineComponent({
             AppLayout: AppLayout,
             HomeCategorySidebar: HomeCategorySidebar,
             HomeRecommendationRail: HomeRecommendationRail,
-            products: products,
-            cart: cart,
+            normalizeBuyerCategory: normalizeBuyerCategory,
+            cartStore: cartStore,
             message: message,
-            tutorials: tutorials,
-            communityPosts: communityPosts,
-            totalCardCount: totalCardCount,
+            topProducts: topProducts,
+            topTutorials: topTutorials,
+            heroTag: heroTag,
+            heroTitle: heroTitle,
+            heroSubtitle: heroSubtitle,
+            highlightLabel: highlightLabel,
+            highlightTitle: highlightTitle,
+            highlightDesc: highlightDesc,
+            formatDuration: formatDuration,
+            formatPrice: formatPrice,
+            hasDisplayImage: hasDisplayImage,
             goProducts: goProducts,
-            goTutorial: goTutorial,
             goCommunity: goCommunity,
+            goTutorials: goTutorials,
+            goProductDetail: goProductDetail,
+            goCart: goCart,
             addToCart: addToCart,
-            clearCart: clearCart,
-            submitOrder: submitOrder,
         };
     },
 });

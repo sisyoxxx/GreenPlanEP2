@@ -16,6 +16,7 @@ const routes = [
   { path: '/tutorial/:id', component: () => import('../domains/buyer/views/TutorialDetailView.vue') },
   { path: '/planting-records', component: () => import('../domains/buyer/views/PlantingRecordsView.vue') },
   { path: '/community', component: () => import('../domains/buyer/views/CommunityView.vue') },
+  { path: '/community/posts/:id', component: () => import('../domains/buyer/views/CommunityPostDetailView.vue') },
 
   { path: '/admin/dashboard', component: () => import('../domains/admin/views/AdminDashboardView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
   { path: '/admin/orders', component: () => import('../domains/admin/views/AdminOrdersView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },

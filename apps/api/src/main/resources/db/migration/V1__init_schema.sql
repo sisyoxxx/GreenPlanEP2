@@ -1,3 +1,5 @@
+SET NAMES utf8mb4;
+
 CREATE TABLE users (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   username VARCHAR(64) NOT NULL UNIQUE,
@@ -108,6 +110,7 @@ CREATE TABLE promotion_posts (
   promotion_id BIGINT NOT NULL,
   channel VARCHAR(32) NOT NULL,
   content TEXT NOT NULL,
+  image_url MEDIUMTEXT,
   post_status VARCHAR(32) NOT NULL DEFAULT 'DRAFT',
   published_at TIMESTAMP NULL,
   created_by BIGINT NOT NULL,
@@ -131,8 +134,8 @@ INSERT INTO users (username, password_hash, role_code) VALUES
 ('stockadmin', '$2a$10$2L90JvMNP95B2S/bR5CV6u9R8stA79Q4iiY77xY7Mpx0bpBfqt4DG', 'INVENTORY_MANAGER');
 
 INSERT INTO products (sku, name, description, price, status, category) VALUES
-('SEED-TOMATO-001', '番茄种子', '适合阳台种植，发芽率高', 9.90, 'PUBLISHED', 'VEGETABLE'),
-('SEED-ROSE-001', '月季花种子', '花期长，适合庭院', 12.50, 'PUBLISHED', 'FLOWER');
+('SEED-TOMATO-001', '番茄种子', '适合阳台种植，发芽稳定，适合新手入门。', 9.90, 'PUBLISHED', '蔬菜种子'),
+('SEED-BASIL-001', '罗勒种子', '适合厨房窗台种植，香味浓郁，适合日常采摘。', 12.50, 'PUBLISHED', '草本植物');
 
 INSERT INTO inventory_items (product_id, online_stock, warning_threshold) VALUES
 (1, 100, 15),

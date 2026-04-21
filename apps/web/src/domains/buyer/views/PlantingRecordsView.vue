@@ -219,21 +219,22 @@ const filteredRecords = computed(() => {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
   max-width: 100%;
   width: calc(100vw - 24px);
   margin-left: calc((100% - (100vw - 24px)) / 2);
   padding: 0 12px;
+  height: calc(100vh - 108px);
+  overflow: hidden;
 }
 
 .diary-sidebar {
-  position: sticky;
-  top: 16px;
   display: grid;
   gap: 4px;
   align-content: start;
-  height: calc(100vh - 100px);
+  min-height: 0;
   overflow-y: auto;
+  padding-right: 4px;
 }
 
 .sidebar-title {
@@ -338,7 +339,14 @@ const filteredRecords = computed(() => {
   flex-shrink: 0;
 }
 
-.diary-main { display: grid; gap: 14px; padding: 0 80px; }
+.diary-main {
+  display: grid;
+  gap: 14px;
+  padding: 0 80px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: calc(80px + 6px);
+}
 
 .top-row {
   display: grid;
@@ -512,10 +520,32 @@ const filteredRecords = computed(() => {
 .empty-state { text-align: center; padding: 40px 16px; }
 .empty-hint { color: #9ca3af; margin: 0; }
 
+.diary-sidebar::-webkit-scrollbar,
+.diary-main::-webkit-scrollbar {
+  width: 8px;
+}
+
+.diary-sidebar::-webkit-scrollbar-thumb,
+.diary-main::-webkit-scrollbar-thumb {
+  background: #d2e3d6;
+  border-radius: 999px;
+}
+
 @media (max-width: 760px) {
-  .diary-shell { grid-template-columns: 1fr; }
-  .diary-sidebar { position: static; height: auto; }
-  .diary-main { padding: 0; }
+  .diary-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  .diary-sidebar {
+    height: auto;
+    overflow: visible;
+    padding-right: 0;
+  }
+  .diary-main {
+    padding: 0;
+    overflow: visible;
+  }
   .top-row { grid-template-columns: 1fr; }
   .form-layout { grid-template-columns: 1fr; }
   .diary-card { flex-direction: column; }

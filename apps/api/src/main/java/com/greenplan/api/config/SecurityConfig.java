@@ -27,7 +27,8 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/products", "/api/products/**", "/api/announcements", "/api/promotions").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/products", "/api/products/**", "/api/announcements", "/api/promotions", "/api/tutorials/**", "/api/ai/**").permitAll()
+                        .requestMatchers("/api/products/*/reviews").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
@@ -36,7 +37,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5174", "http://127.0.0.1:5174"));
+        // Thesis/demo project: allow all localhost ports for convenient dev/proxy setups.
+        // This also covers cases where Vite auto-picks another port (5173/5176/...) or when
+        // the frontend calls the API directly without proxy.
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "http://[::1]:*"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

@@ -2,6 +2,15 @@ import { defineStore } from 'pinia'
 import { http } from '../http/client'
 import type { AuthResponse, LoginPayload, Role, UserProfile } from './types'
 
+function safeParseJson<T>(value: string | null, fallback: T): T {
+  if (!value) return fallback
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return fallback
+  }
+}
+
 interface AuthState {
   accessToken: string
   refreshToken: string
@@ -12,7 +21,7 @@ export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     accessToken: localStorage.getItem('gp2_accessToken') || '',
     refreshToken: localStorage.getItem('gp2_refreshToken') || '',
-    user: JSON.parse(localStorage.getItem('gp2_user') || 'null')
+    user: safeParseJson<UserProfile | null>(localStorage.getItem('gp2_user'), null)
   }),
   getters: {
     isLoggedIn: (state) => !!state.accessToken,
@@ -34,6 +43,11 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem('gp2_accessToken', data.accessToken)
       localStorage.setItem('gp2_refreshToken', data.refreshToken)
       localStorage.setItem('gp2_user', JSON.stringify(data.user))
+    },
+    syncUserProfile(patch: Partial<UserProfile>) {
+      if (!this.user) return
+      this.user = { ...this.user, ...patch }
+      localStorage.setItem('gp2_user', JSON.stringify(this.user))
     },
     logout() {
       this.accessToken = ''

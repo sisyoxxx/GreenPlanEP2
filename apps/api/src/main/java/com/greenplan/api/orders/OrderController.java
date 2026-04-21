@@ -27,4 +27,9 @@ public class OrderController {
     public ApiResponse<List<OrderDetailDto>> listMine(Authentication authentication) {
         return ApiResponse.ok(orderService.listMine((JwtUserPrincipal) authentication.getPrincipal()));
     }
+
+    @PatchMapping("/{id}/received")
+    public ApiResponse<OrderDetailDto> confirmReceived(@PathVariable Long id, Authentication authentication) {
+        return ApiResponse.ok("已确认收货", orderService.confirmReceived(id, (JwtUserPrincipal) authentication.getPrincipal()));
+    }
 }

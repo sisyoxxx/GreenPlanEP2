@@ -24,6 +24,9 @@ public class PromotionPost {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "image_url", columnDefinition = "MEDIUMTEXT")
+    private String imageUrl;
+
     @Column(name = "post_status", nullable = false, length = 32)
     private String postStatus;
 

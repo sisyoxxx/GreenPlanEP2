@@ -21,13 +21,13 @@ public class InventoryController {
     }
 
     @GetMapping("/items")
-    public ApiResponse<List<InventoryItem>> items() {
-        return ApiResponse.ok(inventoryService.listItems());
+    public ApiResponse<List<InventoryItemDto>> items() {
+        return ApiResponse.ok(inventoryService.listItemDtos());
     }
 
     @GetMapping("/warnings")
-    public ApiResponse<List<InventoryItem>> warnings() {
-        return ApiResponse.ok(inventoryService.listWarnings());
+    public ApiResponse<List<InventoryItemDto>> warnings() {
+        return ApiResponse.ok(inventoryService.listWarningDtos());
     }
 
     @PatchMapping("/warnings")

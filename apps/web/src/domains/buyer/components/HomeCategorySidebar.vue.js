@@ -1,18 +1,21 @@
-const categories = [
-    { icon: '🌱', name: '蔬菜种子', desc: '阳台与庭院种植' },
-    { icon: '🌸', name: '花卉种子', desc: '观赏与四季花园' },
-    { icon: '🪴', name: '盆栽绿植', desc: '室内净化与观叶' },
-    { icon: '🧰', name: '种植工具', desc: '育苗、浇灌、修剪' },
-    { icon: '🍀', name: '营养肥料', desc: '土壤、肥料与营养液' }
-];
+import { useRouter } from 'vue-router';
+import { BUYER_CATEGORY_DEFINITIONS } from '../categoryConfig';
+const router = useRouter();
 const services = [
-    { title: '种植新手指引', desc: '从播种到养护的完整说明' },
-    { title: '季节推荐', desc: '根据时令推荐适宜种植的品类' }
+    { title: '新手指引', desc: '从播种、浇水到养护节奏，帮你快速上手。' },
+    { title: '时令推荐', desc: '根据当前适播季节挑选更适合的商品。' }
 ];
+function goCategory(category) {
+    router.push({
+        path: '/products',
+        query: { category }
+    });
+}
 debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
+/** @type {__VLS_StyleScopedClasses['sidebar-grid-button']} */ ;
 /** @type {__VLS_StyleScopedClasses['sidebar-item-desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['left-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['left-sidebar']} */ ;
@@ -39,16 +42,21 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.section, __VLS_intrinsicElemen
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3)({
     ...{ class: "sidebar-title" },
 });
-__VLS_asFunctionalElement(__VLS_intrinsicElements.ul, __VLS_intrinsicElements.ul)({
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "sidebar-list sidebar-grid-list" },
 });
-for (const [item] of __VLS_getVForSourceType((__VLS_ctx.categories))) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.li, __VLS_intrinsicElements.li)({
-        key: (item.name),
-        ...{ class: "sidebar-list-item sidebar-grid-item" },
+for (const [item] of __VLS_getVForSourceType((__VLS_ctx.BUYER_CATEGORY_DEFINITIONS))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
+        ...{ onClick: (...[$event]) => {
+                __VLS_ctx.goCategory(item.label);
+            } },
+        key: (item.label),
+        type: "button",
+        ...{ class: "sidebar-list-item sidebar-grid-item sidebar-grid-button" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
         ...{ class: "sidebar-icon" },
+        'aria-hidden': "true",
     });
     (item.icon);
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -57,7 +65,7 @@ for (const [item] of __VLS_getVForSourceType((__VLS_ctx.categories))) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "sidebar-item-title" },
     });
-    (item.name);
+    (item.label);
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "sidebar-item-desc" },
     });
@@ -71,8 +79,8 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.h3, __VLS_intrinsicElements.h3
 });
 for (const [service] of __VLS_getVForSourceType((__VLS_ctx.services))) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "mini-service-card" },
         key: (service.title),
+        ...{ class: "mini-service-card" },
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "sidebar-item-title" },
@@ -92,6 +100,7 @@ for (const [service] of __VLS_getVForSourceType((__VLS_ctx.services))) {
 /** @type {__VLS_StyleScopedClasses['sidebar-grid-list']} */ ;
 /** @type {__VLS_StyleScopedClasses['sidebar-list-item']} */ ;
 /** @type {__VLS_StyleScopedClasses['sidebar-grid-item']} */ ;
+/** @type {__VLS_StyleScopedClasses['sidebar-grid-button']} */ ;
 /** @type {__VLS_StyleScopedClasses['sidebar-icon']} */ ;
 /** @type {__VLS_StyleScopedClasses['sidebar-grid-text']} */ ;
 /** @type {__VLS_StyleScopedClasses['sidebar-item-title']} */ ;
@@ -105,8 +114,9 @@ var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
-            categories: categories,
+            BUYER_CATEGORY_DEFINITIONS: BUYER_CATEGORY_DEFINITIONS,
             services: services,
+            goCategory: goCategory,
         };
     },
 });

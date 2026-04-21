@@ -10,6 +10,7 @@
         @click="onClick"
       >
         <span class="ball-icon">{{ icon }}</span>
+        <span v-if="badgeVisible" class="ball-badge">{{ badgeTextComputed }}</span>
       </div>
 
       <!-- 弹窗 -->
@@ -30,11 +31,13 @@ const props = withDefaults(defineProps<{
   color?: string
   popupWidth?: number
   popupHeight?: number
+  badgeText?: string | number | null
 }>(), {
   icon: '💬',
   color: 'linear-gradient(135deg, #1f7a41, #34d399)',
   popupWidth: 360,
-  popupHeight: 480
+  popupHeight: 480,
+  badgeText: null
 })
 
 const isOpen = ref(false)
@@ -66,6 +69,16 @@ const popupPositionStyle = computed(() => {
   if (y.value + py + ph > window.innerHeight - 8) py = -ph + 56
   return { left: `${px}px`, top: `${py}px`, width: `${pw}px`, height: `${ph}px` }
 })
+
+const badgeTextComputed = computed(() => {
+  const raw = props.badgeText
+  if (raw === null || raw === undefined) return ''
+  const text = String(raw).trim()
+  if (!text || text === '0') return ''
+  return text
+})
+
+const badgeVisible = computed(() => badgeTextComputed.value.length > 0)
 
 function getEventPos(e: MouseEvent | TouchEvent) {
   if ('touches' in e) return { ex: e.touches[0].clientX, ey: e.touches[0].clientY }
@@ -124,6 +137,7 @@ onUnmounted(() => { onDragEnd() })
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
   user-select: none;
   transition: box-shadow 0.2s;
+  position: relative;
 }
 
 .floating-ball:hover {
@@ -133,6 +147,26 @@ onUnmounted(() => { onDragEnd() })
 .floating-ball:active { cursor: grabbing; }
 
 .ball-icon { font-size: 24px; pointer-events: none; }
+
+.ball-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  line-height: 1;
+}
 
 .floating-popup {
   position: absolute;

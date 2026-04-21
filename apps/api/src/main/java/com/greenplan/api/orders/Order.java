@@ -28,6 +28,18 @@ public class Order {
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
+    @Column(name = "shipping_carrier", length = 64)
+    private String shippingCarrier;
+
+    @Column(name = "tracking_no", length = 64)
+    private String trackingNo;
+
+    @Column(name = "shipping_status", length = 32)
+    private String shippingStatus;
+
+    @Column(name = "shipped_at")
+    private LocalDateTime shippedAt;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 }

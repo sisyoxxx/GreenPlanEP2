@@ -347,19 +347,20 @@ function scrollChatToBottom() {
 
 .tutorial-main {
   display: grid;
-  gap: 14px;
+  gap: 0;
   min-height: 0;
-  overflow-y: auto;
-  padding-right: 6px;
+  overflow: hidden;
 }
 
 .tutorial-sidebar::-webkit-scrollbar,
-.tutorial-main::-webkit-scrollbar {
+.hero-main::-webkit-scrollbar,
+.advice-panel::-webkit-scrollbar {
   width: 8px;
 }
 
 .tutorial-sidebar::-webkit-scrollbar-thumb,
-.tutorial-main::-webkit-scrollbar-thumb {
+.hero-main::-webkit-scrollbar-thumb,
+.advice-panel::-webkit-scrollbar-thumb {
   background: #d2e3d6;
   border-radius: 999px;
 }
@@ -368,13 +369,18 @@ function scrollChatToBottom() {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
+  height: 100%;
+  min-height: 0;
 }
 
 .hero-main {
   display: grid;
   gap: 14px;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
 .carousel-section {
@@ -419,6 +425,10 @@ function scrollChatToBottom() {
   width: 100%;
   max-width: 260px;
   justify-self: end;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
 .panel-kicker {
@@ -514,7 +524,8 @@ function scrollChatToBottom() {
 
 .tutorial-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 320px));
+  justify-content: start;
   gap: 14px;
 }
 
@@ -750,7 +761,8 @@ function scrollChatToBottom() {
   }
 
   .tutorial-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 320px));
+    justify-content: start;
   }
 }
 
@@ -770,6 +782,17 @@ function scrollChatToBottom() {
 
   .tutorial-main {
     overflow: visible;
+    padding-right: 0;
+  }
+
+  .hero-row {
+    height: auto;
+  }
+
+  .hero-main,
+  .advice-panel {
+    overflow: visible;
+    max-height: none;
     padding-right: 0;
   }
 }

@@ -1,10 +1,20 @@
 import { defineStore } from 'pinia';
 import { http } from '../http/client';
+function safeParseJson(value, fallback) {
+    if (!value)
+        return fallback;
+    try {
+        return JSON.parse(value);
+    }
+    catch {
+        return fallback;
+    }
+}
 export const useAuthStore = defineStore('auth', {
     state: () => ({
         accessToken: localStorage.getItem('gp2_accessToken') || '',
         refreshToken: localStorage.getItem('gp2_refreshToken') || '',
-        user: JSON.parse(localStorage.getItem('gp2_user') || 'null')
+        user: safeParseJson(localStorage.getItem('gp2_user'), null)
     }),
     getters: {
         isLoggedIn: (state) => !!state.accessToken,
@@ -26,6 +36,12 @@ export const useAuthStore = defineStore('auth', {
             localStorage.setItem('gp2_accessToken', data.accessToken);
             localStorage.setItem('gp2_refreshToken', data.refreshToken);
             localStorage.setItem('gp2_user', JSON.stringify(data.user));
+        },
+        syncUserProfile(patch) {
+            if (!this.user)
+                return;
+            this.user = { ...this.user, ...patch };
+            localStorage.setItem('gp2_user', JSON.stringify(this.user));
         },
         logout() {
             this.accessToken = '';

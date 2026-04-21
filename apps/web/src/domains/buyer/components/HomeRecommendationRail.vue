@@ -1,178 +1,104 @@
 <template>
   <aside class="home-sidebar right-sidebar page-lite">
-    <section class="sidebar-section smart-header-card">
-      <div>
-        <h3 class="sidebar-title">智能模块</h3>
-        <p class="sidebar-item-desc">登录前展示定位与内容推荐，登录后展示个人种植日记。</p>
-      </div>
-      <button v-if="!auth.isLoggedIn" @click="requestLocation">刷新定位</button>
-    </section>
-
-    <section class="sidebar-section status-card">
-      <h4 class="section-subtitle">定位推荐</h4>
-      <div class="sidebar-item-title">{{ locationTitle }}</div>
-      <div class="sidebar-item-desc">{{ locationDescription }}</div>
-      <div v-if="matchedRegion" class="region-chip">推荐区域：{{ matchedRegion }}</div>
-      <div class="recommend-list">
-        <article class="recommend-card" v-for="item in regionalRecommendations" :key="item.id">
-          <div>
-            <div class="recommend-badge">{{ item.suitableRegion || '通用推荐' }}</div>
-            <div class="sidebar-item-title">{{ item.name }}</div>
-            <div class="sidebar-item-desc">{{ item.description }}</div>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <template v-if="!auth.isLoggedIn">
-      <section class="sidebar-section ai-card">
+    <section class="sidebar-section location-card">
+      <div class="section-head">
         <div>
-          <h4 class="section-subtitle">AI 对话小助手</h4>
-          <div class="sidebar-item-desc">当前为免费模型占位版，后续可切换到第三方 API。</div>
+          <h3 class="sidebar-title">种植定位</h3>
+          <p class="sidebar-item-desc">定位后可继续修改，后续推荐会基于你当前的地区偏好。</p>
         </div>
-        <div class="chat-window">
-          <div class="chat-bubble assistant">你好，我可以根据地区和季节给你推荐适合种植的商品。</div>
-          <div v-for="item in chatMessages" :key="item.id" class="chat-message" :class="item.role === 'user' ? 'is-user' : 'is-assistant'">
-            <div class="chat-bubble">{{ item.text }}</div>
-          </div>
-        </div>
-        <div class="chat-input-row">
-          <input v-model="chatInput" type="text" placeholder="例如：适合华南阳台种植什么？" @keyup.enter="sendChat" />
-          <button @click="sendChat">发送</button>
-        </div>
-      </section>
+        <button class="secondary-btn" @click="locateUser" :disabled="status === 'loading'">
+          {{ status === 'loading' ? '定位中...' : currentLocation ? '重新定位' : '定位' }}
+        </button>
+      </div>
 
-      <section class="sidebar-section">
-        <h4 class="section-subtitle">内容推荐</h4>
-        <article class="notice-card" v-for="item in contentRecommendations" :key="item.title">
-          <div class="sidebar-item-title">{{ item.title }}</div>
-          <div class="sidebar-item-desc">{{ item.desc }}</div>
-        </article>
-      </section>
-    </template>
+      <div class="location-current">
+        <span class="location-label">当前地区</span>
+        <strong>{{ currentLocation || '尚未设置' }}</strong>
+      </div>
 
-    <template v-else>
-      <section class="sidebar-section">
-        <h4 class="section-subtitle">个人种植日记</h4>
-        <article class="notice-card diary-card" v-for="item in diaryEntries" :key="item.id">
-          <div class="sidebar-item-title">{{ item.title }}</div>
-          <div class="diary-meta">{{ item.plantName }} · {{ item.date }}</div>
-          <div class="sidebar-item-desc">{{ item.note }}</div>
-        </article>
-      </section>
-    </template>
+      <label class="location-field">
+        <span>手动修改地区</span>
+        <select v-model="selectedLocation">
+          <option value="">请选择地区</option>
+          <option v-for="option in locationOptions" :key="option" :value="option">{{ option }}</option>
+        </select>
+      </label>
+
+      <p v-if="hint" class="location-hint">{{ hint }}</p>
+    </section>
+
+    <section class="sidebar-section ai-card">
+      <div class="ai-head">
+        <div>
+          <h3 class="sidebar-title">AI 智能模块</h3>
+          <p class="sidebar-item-desc">这里先为你预留智能问答、个性化推荐和种植提醒入口。</p>
+        </div>
+        <span class="ai-badge">占位中</span>
+      </div>
+
+      <div class="ai-placeholder">
+        <div class="ai-orb"></div>
+        <div class="ai-copy">
+          <strong>即将接入 AI 生长助手</strong>
+          <p>后续会支持按定位、季节和已购商品生成专属种植建议。</p>
+        </div>
+      </div>
+
+      <div class="ai-feature-list">
+        <div class="ai-feature-item">智能播种提醒</div>
+        <div class="ai-feature-item">土壤与浇水建议</div>
+        <div class="ai-feature-item">问题诊断入口</div>
+      </div>
+    </section>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useAuthStore } from '../../../core/auth/useAuthStore'
-import { fetchProducts, type Product } from '../api'
+import { computed, ref, watch } from 'vue'
 
-interface ChatMessage {
-  id: number
-  role: 'user' | 'assistant'
-  text: string
-}
+const STORAGE_KEY = 'gp2_buyer_location'
+const locationOptions = ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '南京', '西安', '重庆']
 
-const auth = useAuthStore()
-const chatInput = ref('')
-const products = ref<Product[]>([])
-const matchedRegion = ref('')
-const locationStatus = ref<'idle' | 'loading' | 'success' | 'denied' | 'error' | 'unsupported'>('idle')
-const locationCoords = ref<{ latitude: number; longitude: number } | null>(null)
-const chatMessages = ref<ChatMessage[]>([])
+const status = ref<'idle' | 'loading' | 'ok' | 'error'>('idle')
+const hint = ref('')
+const selectedLocation = ref(localStorage.getItem(STORAGE_KEY) || '')
 
-const diaryEntries = [
-  { id: 1, title: '番茄育苗第7天', plantName: '番茄', date: '2026-04-10', note: '已出芽，保持通风和散射光。' },
-  { id: 2, title: '月季播种第3天', plantName: '月季', date: '2026-04-11', note: '土壤湿润度正常，等待发芽。' },
-  { id: 3, title: '罗勒修剪记录', plantName: '罗勒', date: '2026-04-12', note: '顶部摘心后侧芽开始生长，适合继续控水。' }
-]
+const currentLocation = computed(() => selectedLocation.value)
 
-const contentRecommendations = [
-  { title: '春播家庭指南', desc: '结合地区温度与空间条件，挑选更容易成活的品类。' },
-  { title: '阳台种植避坑清单', desc: '适合新手快速了解光照、浇水和通风的关键细节。' },
-  { title: '小空间种植灵感', desc: '适合阳台、窗台和室内角落的内容推荐。' }
-]
-
-const locationTitle = computed(() => {
-  if (locationStatus.value === 'loading') return '正在获取定位...'
-  if (locationStatus.value === 'success') return locationCoords.value ? `已定位到附近区域（${locationCoords.value.latitude.toFixed(2)}, ${locationCoords.value.longitude.toFixed(2)}）` : '已完成定位'
-  if (locationStatus.value === 'denied') return '定位权限已拒绝'
-  if (locationStatus.value === 'unsupported') return '当前浏览器不支持定位'
-  if (locationStatus.value === 'error') return '定位失败'
-  return '等待定位授权'
+watch(selectedLocation, (value) => {
+  if (value) {
+    localStorage.setItem(STORAGE_KEY, value)
+    hint.value = `已切换为 ${value}，你可以随时再次修改。`
+  } else {
+    localStorage.removeItem(STORAGE_KEY)
+    hint.value = ''
+  }
 })
 
-const locationDescription = computed(() => {
-  if (locationStatus.value === 'success') return matchedRegion.value ? `已按 ${matchedRegion.value} 优先推荐适合你的商品。` : '已获取定位，但暂未匹配到明确地区，将展示默认推荐。'
-  if (locationStatus.value === 'denied') return '你可以稍后重新授权定位，也可以先浏览默认推荐。'
-  if (locationStatus.value === 'unsupported') return '请更换支持定位的浏览器或设备。'
-  if (locationStatus.value === 'error') return '定位不可用，当前展示默认推荐。'
-  if (locationStatus.value === 'loading') return '授权后将根据地理位置推荐商品。'
-  return '登录前会主动请求定位，并根据区域展示商品推荐。'
-})
-
-const regionalRecommendations = computed(() => {
-  if (!products.value.length) return []
-  if (!matchedRegion.value) return products.value.slice(0, 3)
-
-  const matched = products.value.filter((item) => item.suitableRegion?.includes(matchedRegion.value))
-  return (matched.length ? matched : products.value).slice(0, 3)
-})
-
-onMounted(async () => {
-  products.value = await fetchProducts()
-  if (!auth.isLoggedIn) requestLocation()
-})
-
-function requestLocation() {
-  if (typeof navigator === 'undefined' || !navigator.geolocation) {
-    locationStatus.value = 'unsupported'
+function locateUser() {
+  if (!navigator.geolocation) {
+    hint.value = '当前浏览器不支持定位，请手动选择地区。'
+    status.value = 'error'
     return
   }
 
-  locationStatus.value = 'loading'
+  status.value = 'loading'
+  hint.value = ''
+
   navigator.geolocation.getCurrentPosition(
     (position) => {
-      locationCoords.value = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude
-      }
-      matchedRegion.value = mapCoordsToRegion(position.coords.latitude, position.coords.longitude)
-      locationStatus.value = 'success'
+      const latitude = position.coords.latitude
+      const longitude = position.coords.longitude
+      selectedLocation.value = `已定位 (${latitude.toFixed(2)}, ${longitude.toFixed(2)})`
+      hint.value = '定位成功，你也可以通过下拉框重新修改地区。'
+      status.value = 'ok'
     },
-    (error) => {
-      locationStatus.value = error.code === error.PERMISSION_DENIED ? 'denied' : 'error'
-      matchedRegion.value = ''
+    () => {
+      hint.value = '定位失败，请检查浏览器权限或直接手动选择地区。'
+      status.value = 'error'
     },
-    { enableHighAccuracy: false, timeout: 6000, maximumAge: 300000 }
+    { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
   )
-}
-
-function mapCoordsToRegion(latitude: number, longitude: number) {
-  if (longitude >= 118 && latitude >= 20 && latitude <= 36) return '华东'
-  if (longitude >= 108 && longitude < 118 && latitude >= 20 && latitude <= 30) return '华南'
-  if (longitude >= 112 && longitude <= 123 && latitude > 36) return '华北'
-  if (longitude >= 104 && longitude < 112 && latitude >= 25 && latitude <= 34) return '华中'
-  if (longitude < 104 && latitude >= 23 && latitude <= 34) return '西南'
-  if (longitude < 110 && latitude > 34) return '西北'
-  return '东北'
-}
-
-function sendChat() {
-  const text = chatInput.value.trim()
-  if (!text) return
-
-  chatMessages.value.push({ id: Date.now(), role: 'user', text })
-  chatMessages.value.push({
-    id: Date.now() + 1,
-    role: 'assistant',
-    text: matchedRegion.value
-      ? `结合你当前匹配到的${matchedRegion.value}地区，我建议优先关注耐热或适合当季播种的商品，也可以先看看右侧推荐卡片。`
-      : '可以先授权定位，我会优先按地区推荐；如果暂不定位，也可以根据阳台光照和季节先选基础蔬菜或香草类商品。'
-  })
-  chatInput.value = ''
 }
 </script>
 
@@ -184,109 +110,129 @@ function sendChat() {
 
 .sidebar-section {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
-.sidebar-title,
-.section-subtitle {
-  margin: 0;
-  color: #1f7a41;
+.section-head,
+.ai-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
 }
 
 .sidebar-title {
+  margin: 0;
   font-size: 18px;
+  color: #1f7a41;
 }
 
-.section-subtitle {
-  font-size: 16px;
-}
-
-.smart-header-card,
-.status-card,
-.ai-card,
-.recommend-card,
-.notice-card {
-  padding: 12px;
-  border-radius: 14px;
-  background: #f8fcf8;
-  border: 1px solid #e4efe6;
-}
-
-.sidebar-item-title {
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.sidebar-item-desc,
-.diary-meta {
+.sidebar-item-desc {
+  margin: 4px 0 0;
   font-size: 13px;
   color: #6b7280;
   line-height: 1.6;
 }
 
-.region-chip,
-.recommend-badge {
+.location-current,
+.location-field {
+  display: grid;
+  gap: 6px;
+}
+
+.location-label,
+.location-field span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4b5563;
+}
+
+.location-current strong {
+  color: #1f2937;
+}
+
+.location-hint {
+  margin: 0;
+  color: #1f7a41;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.secondary-btn {
+  background: #f2f6f2;
+  border: 1px solid #e3e8e3;
+  color: #1f2937;
+}
+
+.secondary-btn:disabled {
+  opacity: 0.6;
+}
+
+.ai-card {
+  padding-top: 2px;
+}
+
+.ai-badge {
   display: inline-flex;
-  width: fit-content;
   align-items: center;
+  padding: 4px 10px;
   border-radius: 999px;
-  background: #dff4e4;
+  background: #edf9ef;
   color: #1f7a41;
   font-size: 12px;
   font-weight: 700;
-  padding: 4px 8px;
 }
 
-.recommend-list,
-.chat-window {
+.ai-placeholder {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid #e2efe5;
+  background: linear-gradient(135deg, #f7fcf8, #eef8f0);
+}
+
+.ai-orb {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(135deg, #1f7a41, #8fd1a6);
+  box-shadow: 0 14px 26px rgba(31, 122, 65, 0.18);
+}
+
+.ai-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.ai-copy strong {
+  color: #16351f;
+}
+
+.ai-copy p {
+  margin: 0;
+  color: #6b7280;
+  line-height: 1.6;
+  font-size: 13px;
+}
+
+.ai-feature-list {
   display: grid;
   gap: 8px;
 }
 
-.chat-window {
-  max-height: 220px;
-  overflow: auto;
-  scrollbar-width: none;
-}
-
-.chat-window::-webkit-scrollbar {
-  display: none;
-}
-
-.chat-message {
-  display: flex;
-}
-
-.chat-message.is-user {
-  justify-content: flex-end;
-}
-
-.chat-bubble {
-  max-width: 100%;
+.ai-feature-item {
   padding: 10px 12px;
   border-radius: 12px;
-  background: #eef7f0;
-  color: #1f2937;
+  border: 1px solid #e4efe6;
+  background: #f8fcf8;
+  color: #374151;
   font-size: 13px;
-  line-height: 1.5;
-}
-
-.chat-message.is-user .chat-bubble {
-  background: #dff4e4;
-}
-
-.chat-input-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-}
-
-.chat-input-row input {
-  width: 100%;
-}
-
-.diary-card {
-  gap: 4px;
+  font-weight: 600;
 }
 
 @media (max-width: 905px) {

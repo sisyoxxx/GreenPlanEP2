@@ -7,7 +7,9 @@ import com.greenplan.api.security.JwtUserPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class InventoryService {
@@ -37,11 +39,44 @@ public class InventoryService {
                 .toList();
     }
 
+    public List<InventoryItemDto> listItemDtos() {
+        Map<Long, InventoryItem> byProductId = new HashMap<>();
+        for (InventoryItem item : inventoryItemRepository.findAll()) {
+            if (item.getProduct() != null && item.getProduct().getId() != null) {
+                byProductId.put(item.getProduct().getId(), item);
+            }
+        }
+
+        return productRepository.findAll().stream()
+                .map(p -> {
+                    InventoryItem item = byProductId.get(p.getId());
+                    return new InventoryItemDto(
+                            item == null ? null : item.getId(),
+                            p.getId(),
+                            p.getSku(),
+                            p.getName(),
+                            item == null ? 0 : item.getOnlineStock(),
+                            item == null ? 5 : item.getWarningThreshold()
+                    );
+                })
+                .toList();
+    }
+
+    public List<InventoryItemDto> listWarningDtos() {
+        return listItemDtos().stream()
+                .filter(dto -> dto.onlineStock() != null && dto.warningThreshold() != null && dto.onlineStock() <= dto.warningThreshold())
+                .toList();
+    }
+
     @Transactional
     public void updateWarningThreshold(WarningThresholdRequest request, JwtUserPrincipal principal) {
         if (principal.getRole() != RoleCode.INVENTORY_MANAGER) {
-            throw new IllegalArgumentException("无权限设置库存预警");
+            throw new IllegalArgumentException("无权限设置库存预警阈值");
         }
+        if (request.warningThreshold() < 0) {
+            throw new IllegalArgumentException("预警阈值不能为负数");
+        }
+
         InventoryItem item = inventoryItemRepository.findByProductId(request.productId())
                 .orElseThrow(() -> new IllegalArgumentException("库存记录不存在"));
         item.setWarningThreshold(request.warningThreshold());
@@ -53,6 +88,10 @@ public class InventoryService {
         if (principal.getRole() != RoleCode.INVENTORY_MANAGER) {
             throw new IllegalArgumentException("无权限入库");
         }
+        if (request.quantity() <= 0) {
+            throw new IllegalArgumentException("入库数量必须大于 0");
+        }
+
         InventoryItem item = inventoryItemRepository.findByProductId(request.productId())
                 .orElseGet(() -> createInventoryItem(request.productId()));
         item.setOnlineStock(item.getOnlineStock() + request.quantity());
@@ -79,6 +118,7 @@ public class InventoryService {
     private InventoryItem createInventoryItem(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("商品不存在"));
+
         InventoryItem item = new InventoryItem();
         item.setProduct(product);
         item.setOnlineStock(0);

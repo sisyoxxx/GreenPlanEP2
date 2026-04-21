@@ -1,0 +1,29 @@
+# Node / frontend
+**/node_modules/
+**/dist/
+**/node_cache/
+node_cache/
+node_global/
+
+# TypeScript / Vite
+**/*.tsbuildinfo
+
+# Generated artifacts accidentally committed before (keep source-of-truth in .ts/.vue)
+apps/web/src/**/*.js
+apps/web/src/**/*.vue.d.ts
+
+# Java / backend
+**/target/
+**/*.class
+
+# Logs
+**/*.log
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db

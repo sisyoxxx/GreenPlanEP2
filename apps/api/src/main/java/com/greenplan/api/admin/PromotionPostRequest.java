@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 public record PromotionPostRequest(
         @NotNull Long promotionId,
         @NotBlank String channel,
-        @NotBlank String content
+        @NotBlank String content,
+        String imageUrl
 ) {
 }

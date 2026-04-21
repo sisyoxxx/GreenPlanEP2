@@ -6,10 +6,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class AdminService {
+
+    private static final Set<String> ALLOWED_POST_CHANNELS = Set.of("community", "home", "product");
 
     private final AnnouncementRepository announcementRepository;
     private final PromotionRepository promotionRepository;
@@ -24,11 +28,21 @@ public class AdminService {
     }
 
     public List<Announcement> listAnnouncements() {
-        return announcementRepository.findAll();
+        return announcementRepository.findAll().stream()
+                .sorted(Comparator.comparing(Announcement::getPublishedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
     }
 
     public List<Promotion> listPromotions() {
-        return promotionRepository.findAll();
+        return promotionRepository.findAll().stream()
+                .sorted(Comparator.comparing(Promotion::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
+    }
+
+    public List<PromotionPost> listPromotionPosts() {
+        return postRepository.findAll().stream()
+                .sorted(Comparator.comparing(PromotionPost::getPublishedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
     }
 
     @Transactional
@@ -50,6 +64,7 @@ public class AdminService {
         promotion.setTitle(request.title());
         promotion.setStrategyType(request.strategyType());
         promotion.setDescription(request.description());
+        promotion.setImageUrl(request.imageUrl());
         promotion.setStatus("PUBLISHED");
         promotion.setCreatedBy(principal.getId());
         return promotionRepository.save(promotion);
@@ -58,19 +73,62 @@ public class AdminService {
     @Transactional
     public PromotionPost createPromotionPost(PromotionPostRequest request, JwtUserPrincipal principal) {
         ensureAdmin(principal);
+        String channel = normalizeChannel(request.channel());
+        validatePostChannel(channel);
         PromotionPost post = new PromotionPost();
         post.setPromotionId(request.promotionId());
-        post.setChannel(request.channel());
+        post.setChannel(channel);
         post.setContent(request.content());
+        post.setImageUrl(normalizeBlankToNull(request.imageUrl()));
         post.setPostStatus("PUBLISHED");
         post.setPublishedAt(LocalDateTime.now());
         post.setCreatedBy(principal.getId());
         return postRepository.save(post);
     }
 
+    @Transactional
+    public PromotionPost updatePromotionPost(Long postId, PromotionPostRequest request, JwtUserPrincipal principal) {
+        ensureAdmin(principal);
+        String channel = normalizeChannel(request.channel());
+        validatePostChannel(channel);
+        PromotionPost post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("Promotion post not found"));
+        post.setPromotionId(request.promotionId());
+        post.setChannel(channel);
+        post.setContent(request.content());
+        post.setImageUrl(normalizeBlankToNull(request.imageUrl()));
+        post.setPostStatus("PUBLISHED");
+        post.setPublishedAt(LocalDateTime.now());
+        return postRepository.save(post);
+    }
+
+    @Transactional
+    public void deletePromotionPost(Long postId, JwtUserPrincipal principal) {
+        ensureAdmin(principal);
+        PromotionPost post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("Promotion post not found"));
+        postRepository.delete(post);
+    }
+
     private void ensureAdmin(JwtUserPrincipal principal) {
         if (principal.getRole() != RoleCode.ADMIN) {
-            throw new IllegalArgumentException("仅管理员可执行该操作");
+            throw new IllegalArgumentException("Only admin can perform this action");
         }
+    }
+
+    private void validatePostChannel(String channel) {
+        if (!ALLOWED_POST_CHANNELS.contains(channel)) {
+            throw new IllegalArgumentException("Unsupported promotion post channel");
+        }
+    }
+
+    private static String normalizeChannel(String channel) {
+        return channel == null ? "" : channel.trim().toLowerCase();
+    }
+
+    private static String normalizeBlankToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

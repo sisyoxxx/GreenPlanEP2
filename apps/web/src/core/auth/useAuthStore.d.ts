@@ -12,6 +12,8 @@ export declare const useAuthStore: import("pinia").StoreDefinition<"auth", AuthS
             id: number;
             username: string;
             role: Role;
+            nickname?: string | null | undefined;
+            avatarDataUrl?: string | null | undefined;
         } | null;
     } & import("pinia").PiniaCustomStateProperties<AuthState>) => boolean;
     role: (state: {
@@ -21,6 +23,8 @@ export declare const useAuthStore: import("pinia").StoreDefinition<"auth", AuthS
             id: number;
             username: string;
             role: Role;
+            nickname?: string | null | undefined;
+            avatarDataUrl?: string | null | undefined;
         } | null;
     } & import("pinia").PiniaCustomStateProperties<AuthState>) => Role | null;
 }, {
@@ -31,6 +35,7 @@ export declare const useAuthStore: import("pinia").StoreDefinition<"auth", AuthS
         roleCode: Role;
     }): Promise<void>;
     applyAuth(data: AuthResponse): void;
+    syncUserProfile(patch: Partial<UserProfile>): void;
     logout(): void;
 }>;
 export {};
