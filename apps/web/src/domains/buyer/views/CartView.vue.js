@@ -159,9 +159,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h1, __VLS_intrinsicElements.h1)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
-    ...{ class: "desc" },
-});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "cart-header-actions" },
 });
@@ -475,7 +472,6 @@ var __VLS_2;
 /** @type {__VLS_StyleScopedClasses['cart-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['page-lite']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-header']} */ ;
-/** @type {__VLS_StyleScopedClasses['desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['cart-header-actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['secondary-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['secondary-btn']} */ ;

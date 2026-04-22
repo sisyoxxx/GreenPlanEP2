@@ -4,7 +4,7 @@
       <section class="page-lite page-head">
         <div>
           <h2 class="page-title">教程管理</h2>
-          <p class="page-desc">发布、编辑和维护教程内容，支持分类与展示区位管理。</p>
+          <p class="page-desc">发布、编辑和维护教程内容，支持封面链接与详情视频配置。</p>
         </div>
         <button class="add-btn" @click="startCreate">
           {{ editingId ? '新建教程' : showForm ? '收起表单' : '发布教程' }}
@@ -28,7 +28,7 @@
           <label>
             <span>展示区域</span>
             <select v-model="form.displayArea">
-              <option value="HOT">HOT（轮播）</option>
+              <option value="HOT">HOT（热门）</option>
               <option value="LIST">LIST（列表）</option>
             </select>
           </label>
@@ -73,18 +73,31 @@
         </label>
 
         <label class="full-span media-field">
-          <span>教程媒体（可选）</span>
-          <div class="media-actions">
-            <button class="secondary-btn" type="button" @click="triggerMediaUpload">上传图片或视频</button>
-            <button v-if="form.mediaUrl" class="secondary-btn" type="button" @click="clearMedia">移除媒体</button>
-            <input ref="mediaInput" class="hidden-input" type="file" accept="image/*,video/*" @change="handleMediaChange" />
-          </div>
-          <div v-if="form.mediaUrl" class="media-preview">
-            <img v-if="form.mediaType === 'IMAGE'" :src="form.mediaUrl" alt="tutorial media" />
-            <video v-else-if="form.mediaType === 'VIDEO'" :src="form.mediaUrl" controls />
-            <p class="muted">当前媒体类型：{{ form.mediaType === 'VIDEO' ? '视频' : '图片' }}</p>
-          </div>
+          <span>封面图片链接（可选）</span>
+          <input v-model.trim="form.mediaUrl" type="text" placeholder="https://..." />
+          <p class="muted">教程卡片和详情封面将使用该图片链接展示。</p>
         </label>
+
+        <label class="full-span media-field">
+          <span>详情页视频（可选，本地上传）</span>
+          <div class="media-actions">
+            <button class="secondary-btn" type="button" @click="triggerVideoUpload">上传本地视频</button>
+            <button v-if="form.detailVideoUrl" class="secondary-btn" type="button" @click="clearDetailVideo">移除视频</button>
+            <input ref="videoInput" class="hidden-input" type="file" accept="video/*" @change="handleVideoChange" />
+          </div>
+          <p class="muted">上传后将作为详情页“视频讲解”内容展示。</p>
+        </label>
+
+        <div v-if="form.mediaUrl || form.detailVideoUrl" class="media-preview-grid">
+          <div v-if="form.mediaUrl" class="media-preview">
+            <strong>封面预览</strong>
+            <img :src="form.mediaUrl" alt="cover preview" @error="onCoverError" />
+          </div>
+          <div v-if="form.detailVideoUrl" class="media-preview">
+            <strong>视频预览</strong>
+            <video :src="form.detailVideoUrl" controls />
+          </div>
+        </div>
 
         <div class="toggle-row">
           <label class="checkbox-field">
@@ -122,7 +135,8 @@
                   <span class="badge">{{ item.displayArea }}</span>
                   <span class="badge subtle">{{ item.tag }}</span>
                   <span class="badge subtle">{{ item.difficulty || '未设置难度' }}</span>
-                  <span v-if="item.mediaType" class="badge subtle">{{ item.mediaType === 'VIDEO' ? '含视频' : '含图片' }}</span>
+                  <span v-if="item.mediaUrl" class="badge subtle">含封面</span>
+                  <span v-if="item.detailVideoUrl || item.mediaType === 'VIDEO'" class="badge subtle">含视频</span>
                 </div>
                 <h3>{{ item.title }}</h3>
               </div>
@@ -137,6 +151,7 @@
               <span>分类：{{ categoryLabel(item.categoryCode) }}</span>
               <span>排序：{{ item.displayOrder }}</span>
               <span>时长：{{ item.durationMinutes ? `${item.durationMinutes} 分钟` : '未设置' }}</span>
+              <span>创建时间：{{ formatDate(item.createdAt) }}</span>
               <span>更新时间：{{ formatDate(item.updatedAt) }}</span>
             </div>
 
@@ -178,7 +193,7 @@ const editingId = ref<number | null>(null)
 const keyword = ref('')
 const message = ref('')
 const tutorials = ref<AdminTutorial[]>([])
-const mediaInput = ref<HTMLInputElement | null>(null)
+const videoInput = ref<HTMLInputElement | null>(null)
 
 const form = reactive({
   displayArea: 'LIST',
@@ -191,7 +206,7 @@ const form = reactive({
   durationMinutes: null as number | null,
   backgroundStyle: 'linear-gradient(135deg, #dff4e4, #b6e8c4)',
   mediaUrl: '',
-  mediaType: null as 'IMAGE' | 'VIDEO' | null,
+  detailVideoUrl: '',
   favoriteDefault: false,
   published: true
 })
@@ -209,6 +224,7 @@ reload()
 
 async function reload() {
   loading.value = true
+  message.value = ''
   try {
     tutorials.value = await fetchAdminTutorials()
   } catch (err: any) {
@@ -240,7 +256,7 @@ function editItem(item: AdminTutorial) {
   form.durationMinutes = item.durationMinutes
   form.backgroundStyle = item.backgroundStyle || ''
   form.mediaUrl = item.mediaUrl || ''
-  form.mediaType = item.mediaType || null
+  form.detailVideoUrl = item.detailVideoUrl || ''
   form.favoriteDefault = item.favoriteDefault
   form.published = item.published
 }
@@ -262,10 +278,10 @@ function resetForm() {
   form.durationMinutes = null
   form.backgroundStyle = 'linear-gradient(135deg, #dff4e4, #b6e8c4)'
   form.mediaUrl = ''
-  form.mediaType = null
+  form.detailVideoUrl = ''
   form.favoriteDefault = false
   form.published = true
-  if (mediaInput.value) mediaInput.value.value = ''
+  if (videoInput.value) videoInput.value.value = ''
 }
 
 async function submit() {
@@ -277,6 +293,7 @@ async function submit() {
   submitting.value = true
   message.value = ''
 
+  const coverUrl = form.mediaUrl.trim()
   const payload = {
     displayArea: form.displayArea,
     displayOrder: form.displayOrder,
@@ -287,8 +304,9 @@ async function submit() {
     difficulty: form.difficulty,
     durationMinutes: form.durationMinutes,
     backgroundStyle: form.backgroundStyle.trim(),
-    mediaUrl: form.mediaUrl || null,
-    mediaType: form.mediaUrl ? form.mediaType : null,
+    mediaUrl: coverUrl || null,
+    mediaType: coverUrl ? 'IMAGE' as const : null,
+    detailVideoUrl: form.detailVideoUrl || null,
     favoriteDefault: form.favoriteDefault,
     published: form.published
   }
@@ -328,29 +346,31 @@ function categoryLabel(code: string | null) {
 }
 
 function formatDate(value: string | null) {
-  if (!value) return '刚刚'
+  if (!value) return '未记录'
   return value.replace('T', ' ').slice(0, 16)
 }
 
-function triggerMediaUpload() {
-  mediaInput.value?.click()
+function triggerVideoUpload() {
+  videoInput.value?.click()
 }
 
-function clearMedia() {
-  form.mediaUrl = ''
-  form.mediaType = null
-  if (mediaInput.value) mediaInput.value.value = ''
+function clearDetailVideo() {
+  form.detailVideoUrl = ''
+  if (videoInput.value) videoInput.value.value = ''
 }
 
-function handleMediaChange(event: Event) {
+function handleVideoChange(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   const reader = new FileReader()
   reader.onload = () => {
-    form.mediaUrl = String(reader.result || '')
-    form.mediaType = file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE'
+    form.detailVideoUrl = String(reader.result || '')
   }
   reader.readAsDataURL(file)
+}
+
+function onCoverError() {
+  message.value = '封面链接无法加载，请检查图片地址。'
 }
 </script>
 
@@ -453,19 +473,35 @@ label span {
   flex-wrap: wrap;
 }
 
+.media-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
 .media-preview {
   display: grid;
   gap: 8px;
 }
 
+.media-preview strong {
+  font-size: 12px;
+  color: #4b5563;
+}
+
 .media-preview img,
 .media-preview video {
   width: 100%;
-  max-width: 360px;
   border-radius: 12px;
   border: 1px solid #e5efe7;
   object-fit: cover;
   max-height: 220px;
+}
+
+.muted {
+  margin: 0;
+  color: #6b7280;
+  font-size: 12px;
 }
 
 .secondary-btn {

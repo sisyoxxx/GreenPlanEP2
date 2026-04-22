@@ -152,7 +152,7 @@
                 <button class="secondary-btn" :class="{ active: favoritePostIdSet.has(post.id) }" @click.stop="toggleFavorite(post)">
                   {{ favoritePostIdSet.has(post.id) ? '已收藏' : '收藏' }}
                 </button>
-                <button class="secondary-btn" @click.stop="prefillReply(post)">回复</button>
+                <button class="secondary-btn" @click.stop="prefillReply(post)">评论</button>
                 <button class="secondary-btn" @click.stop="prefillMessage(post)">私信</button>
               </div>
             </article>
@@ -783,13 +783,16 @@ function safeParse<T>(value: string | null, fallback: T): T {
 }
 
 .post-list {
-  column-count: 3;
-  column-gap: 14px;
+  column-width: 248px;
+  column-gap: 12px;
 }
 
 .post-card {
   break-inside: avoid;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+  gap: 8px;
+  padding: 0;
+  overflow: hidden;
   cursor: pointer;
   transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
@@ -801,9 +804,46 @@ function safeParse<T>(value: string | null, fallback: T): T {
 
 .post-image {
   width: 100%;
-  max-height: 220px;
+  height: 152px;
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: 0;
+}
+
+.post-head,
+.post-card h3,
+.post-card p,
+.post-card .row {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.post-head {
+  padding-top: 10px;
+}
+
+.post-card h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.post-card p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #4b5563;
+}
+
+.post-card .row {
+  padding-bottom: 10px;
+  gap: 6px;
+}
+
+.post-card .secondary-btn {
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.2;
 }
 
 .post-head {
@@ -813,6 +853,7 @@ function safeParse<T>(value: string | null, fallback: T): T {
 }
 
 .tag {
+  font-size: 12px;
   font-weight: 700;
   color: #1f7a41;
 }
@@ -840,7 +881,8 @@ function safeParse<T>(value: string | null, fallback: T): T {
 
 @media (max-width: 1280px) {
   .post-list {
-    column-count: 2;
+    column-width: 220px;
+    column-gap: 10px;
   }
 }
 
@@ -864,6 +906,7 @@ function safeParse<T>(value: string | null, fallback: T): T {
 @media (max-width: 760px) {
   .post-list {
     column-count: 1;
+    column-width: auto;
   }
 
   .chat-compose {

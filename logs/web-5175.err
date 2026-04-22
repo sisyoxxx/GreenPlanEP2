@@ -1,0 +1,14 @@
+[2m20:56:39[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite-plugin-vue-inspector[39m
+  File: [36mD:/tool/aLemon/vue/GreenPlanEP2/apps/web/src/domains/admin/views/AdminProductsView.vue[39m
+      at createCompilerError (D:\tool\aLemon\vue\GreenPlanEP2\apps\web\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1378:17)
+      at emitError (D:\tool\aLemon\vue\GreenPlanEP2\apps\web\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3014:5)
+      at Object.onclosetag (D:\tool\aLemon\vue\GreenPlanEP2\apps\web\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2381:13)
+      at Tokenizer.stateInClosingTagName (D:\tool\aLemon\vue\GreenPlanEP2\apps\web\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:799:16)
+      at Tokenizer.parse (D:\tool\aLemon\vue\GreenPlanEP2\apps\web\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1157:16)
+      at Object.baseParse (D:\tool\aLemon\vue\GreenPlanEP2\apps\web\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3053:13)
+      at parse (D:\tool\aLemon\vue\GreenPlanEP2\apps\web\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at result (file:///D:/tool/aLemon/vue/GreenPlanEP2/apps/web/node_modules/vite-plugin-vue-inspector/dist/index.mjs:29:21)
+      at new Promise (<anonymous>)
+      at compileSFCTemplate (file:///D:/tool/aLemon/vue/GreenPlanEP2/apps/web/node_modules/vite-plugin-vue-inspector/dist/index.mjs:26:24)
+^C^C

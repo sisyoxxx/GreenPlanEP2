@@ -5,7 +5,6 @@
         <div class="cart-header">
           <div>
             <h1>购物车</h1>
-            <p class="desc">支持按关键词筛选、批量勾选付款或删除，底部会汇总当前已加入的商品。</p>
           </div>
           <div class="cart-header-actions">
             <button v-if="!cartStore.isEmpty" class="secondary-btn" @click="toggleMultiMode">

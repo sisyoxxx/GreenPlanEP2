@@ -4,7 +4,6 @@
       <aside class="orders-sidebar page-lite">
         <div class="sidebar-head">
           <h2>交易中心</h2>
-          <p>订单与评价状态会实时同步，方便你快速处理。</p>
         </div>
 
         <div class="sidebar-search">
@@ -39,7 +38,6 @@
         <section class="page-lite toolbar-card">
           <div>
             <h1>{{ activeTitle }}</h1>
-            <p class="muted">{{ activeDescription }}</p>
           </div>
           <div class="toolbar-actions">
             <select v-model="sortBy">
@@ -235,11 +233,6 @@ const activeTitle = computed(() => {
     reviews: '我的评价'
   }
   return map[activeTab.value]
-})
-
-const activeDescription = computed(() => {
-  if (activeTab.value === 'reviews') return '你提交过的评价会显示在商品详情页，帮助其他买家决策。'
-  return '这里展示你的订单状态，已简化物流信息，支持一键确认收货。'
 })
 
 const filteredOrders = computed(() => {

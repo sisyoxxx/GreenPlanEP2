@@ -18,6 +18,7 @@ public record TutorialUpsertRequest(
         @Size(max = 255) String backgroundStyle,
         String mediaUrl,
         @Size(max = 16) String mediaType,
+        String detailVideoUrl,
         boolean favoriteDefault,
         boolean published
 ) {

@@ -10,7 +10,7 @@
         <div class="stat-icon">￥</div>
         <div>
           <div class="stat-value">¥{{ formatMoney(summary.grossSales) }}</div>
-          <div class="stat-label">销售总额</div>
+          <div class="stat-label">月销售总额</div>
         </div>
       </div>
       <div class="stat-card">

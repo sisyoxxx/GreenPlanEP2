@@ -43,6 +43,7 @@ export interface AdminTutorial {
   backgroundStyle: string | null
   mediaUrl: string | null
   mediaType: 'IMAGE' | 'VIDEO' | null
+  detailVideoUrl: string | null
   favoriteDefault: boolean
   published: boolean
   createdAt: string | null
@@ -222,6 +223,22 @@ export async function createPromotion(payload: {
   return http.post('/api/admin/promotions', payload)
 }
 
+export async function updatePromotion(
+  id: number,
+  payload: {
+    title: string
+    strategyType: string
+    description: string
+    imageUrl: string
+  }
+) {
+  return http.put(`/api/admin/promotions/${id}`, payload)
+}
+
+export async function deletePromotion(id: number) {
+  return http.delete(`/api/admin/promotions/${id}`)
+}
+
 export async function fetchPromotionPosts() {
   const res = await http.get('/api/promotion-posts') as { data: AdminPromotionPost[] }
   return res.data
@@ -256,6 +273,7 @@ export async function createTutorial(payload: {
   backgroundStyle: string
   mediaUrl: string | null
   mediaType: 'IMAGE' | 'VIDEO' | null
+  detailVideoUrl: string | null
   favoriteDefault: boolean
   published: boolean
 }) {
@@ -276,6 +294,7 @@ export async function updateTutorial(
     backgroundStyle: string
     mediaUrl: string | null
     mediaType: 'IMAGE' | 'VIDEO' | null
+    detailVideoUrl: string | null
     favoriteDefault: boolean
     published: boolean
   }

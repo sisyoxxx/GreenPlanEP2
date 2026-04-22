@@ -83,6 +83,7 @@ public class TutorialService {
                 tutorial.getBackgroundStyle(),
                 tutorial.getMediaUrl(),
                 tutorial.getMediaType(),
+                tutorial.getDetailVideoUrl(),
                 tutorial.isFavoriteDefault()
         );
     }
@@ -101,6 +102,7 @@ public class TutorialService {
                 tutorial.getBackgroundStyle(),
                 tutorial.getMediaUrl(),
                 tutorial.getMediaType(),
+                tutorial.getDetailVideoUrl(),
                 tutorial.isFavoriteDefault(),
                 tutorial.isPublished(),
                 tutorial.getCreatedAt(),
@@ -121,6 +123,7 @@ public class TutorialService {
         String mediaUrl = normalizeText(request.mediaUrl());
         tutorial.setMediaUrl(mediaUrl);
         tutorial.setMediaType(mediaUrl == null ? null : normalizeMediaType(request.mediaType()));
+        tutorial.setDetailVideoUrl(normalizeText(request.detailVideoUrl()));
         tutorial.setFavoriteDefault(request.favoriteDefault());
         tutorial.setPublished(request.published());
     }

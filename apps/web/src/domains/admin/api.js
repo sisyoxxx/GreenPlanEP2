@@ -36,6 +36,12 @@ export async function fetchPromotions() {
 export async function createPromotion(payload) {
     return http.post('/api/admin/promotions', payload);
 }
+export async function updatePromotion(id, payload) {
+    return http.put(`/api/admin/promotions/${id}`, payload);
+}
+export async function deletePromotion(id) {
+    return http.delete(`/api/admin/promotions/${id}`);
+}
 export async function fetchPromotionPosts() {
     const res = await http.get('/api/promotion-posts');
     return res.data;

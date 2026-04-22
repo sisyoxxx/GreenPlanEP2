@@ -27,6 +27,7 @@ export interface TutorialItem {
     backgroundStyle: string;
     mediaUrl: string | null;
     mediaType: 'IMAGE' | 'VIDEO' | null;
+    detailVideoUrl: string | null;
     favoriteDefault: boolean;
 }
 export interface TutorialList {

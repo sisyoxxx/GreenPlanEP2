@@ -15,6 +15,7 @@ public record TutorialAdminDto(
         String backgroundStyle,
         String mediaUrl,
         String mediaType,
+        String detailVideoUrl,
         boolean favoriteDefault,
         boolean published,
         LocalDateTime createdAt,

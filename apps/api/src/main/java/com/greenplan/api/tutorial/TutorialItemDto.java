@@ -13,6 +13,7 @@ public record TutorialItemDto(
         String backgroundStyle,
         String mediaUrl,
         String mediaType,
+        String detailVideoUrl,
         boolean favoriteDefault
 ) {
 }

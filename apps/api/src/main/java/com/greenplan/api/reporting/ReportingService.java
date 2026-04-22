@@ -38,11 +38,17 @@ public class ReportingService {
         List<Map<String, Object>> productSalesRows = buildProductSalesRows(products, salesByProductId);
 
         int totalOrders = (int) orderRepository.count();
-        int totalUnits = orderItemRepository.sumAllQuantities();
-        BigDecimal grossSales = orderItemRepository.sumAllLineTotals();
-        if (grossSales == null) {
-            grossSales = BigDecimal.ZERO;
+        int totalUnits = salesByProductId.values().stream().mapToInt(Integer::intValue).sum();
+        BigDecimal grossSales = BigDecimal.ZERO;
+        for (Product product : products) {
+            BigDecimal price = product.getPrice();
+            if (price == null) {
+                continue;
+            }
+            int sales = salesByProductId.getOrDefault(product.getId(), 0);
+            grossSales = grossSales.add(price.multiply(BigDecimal.valueOf(sales)));
         }
+        grossSales = grossSales.setScale(2, RoundingMode.HALF_UP);
 
         BigDecimal avgOrder = totalOrders == 0
                 ? BigDecimal.ZERO

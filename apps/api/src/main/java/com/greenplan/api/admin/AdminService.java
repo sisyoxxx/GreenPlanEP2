@@ -92,6 +92,29 @@ public class AdminService {
     }
 
     @Transactional
+    public Promotion updatePromotion(Long promotionId, PromotionRequest request, JwtUserPrincipal principal) {
+        ensureAdmin(principal);
+        Promotion promotion = promotionRepository.findById(promotionId)
+                .orElseThrow(() -> new IllegalArgumentException("Promotion not found"));
+        ensurePublishedPromotion(promotion);
+        promotion.setTitle(request.title());
+        promotion.setStrategyType(request.strategyType());
+        promotion.setDescription(request.description());
+        promotion.setImageUrl(request.imageUrl());
+        promotion.setStatus("PUBLISHED");
+        return promotionRepository.save(promotion);
+    }
+
+    @Transactional
+    public void deletePromotion(Long promotionId, JwtUserPrincipal principal) {
+        ensureAdmin(principal);
+        Promotion promotion = promotionRepository.findById(promotionId)
+                .orElseThrow(() -> new IllegalArgumentException("Promotion not found"));
+        ensurePublishedPromotion(promotion);
+        promotionRepository.delete(promotion);
+    }
+
+    @Transactional
     public PromotionPost createPromotionPost(PromotionPostRequest request, JwtUserPrincipal principal) {
         ensureAdmin(principal);
         String channel = normalizeChannel(request.channel());
@@ -146,6 +169,12 @@ public class AdminService {
     private void ensurePublishedAnnouncement(Announcement announcement) {
         if (!"PUBLISHED".equalsIgnoreCase(announcement.getStatus())) {
             throw new IllegalArgumentException("Only published announcements can be edited or deleted");
+        }
+    }
+
+    private void ensurePublishedPromotion(Promotion promotion) {
+        if (!"PUBLISHED".equalsIgnoreCase(promotion.getStatus())) {
+            throw new IllegalArgumentException("Only published promotions can be edited or deleted");
         }
     }
 

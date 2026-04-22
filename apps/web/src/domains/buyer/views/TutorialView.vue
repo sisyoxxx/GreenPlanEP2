@@ -17,24 +17,6 @@
       <main class="tutorial-main">
         <div class="hero-row">
           <div class="hero-main">
-            <div class="carousel-section page-lite">
-              <Swiper
-                :modules="[Autoplay, Pagination]"
-                :autoplay="{ delay: 4000, disableOnInteraction: false }"
-                :pagination="{ clickable: true }"
-                :loop="hotTutorials.length > 1"
-                class="tutorial-swiper"
-              >
-                <SwiperSlide v-for="item in hotTutorials" :key="item.id">
-                  <div class="slide-card" :style="{ background: item.backgroundStyle }">
-                    <div class="slide-tag">{{ item.tag }}</div>
-                    <h2 class="slide-title">{{ item.title }}</h2>
-                    <p class="slide-desc">{{ item.description }}</p>
-                  </div>
-                </SwiperSlide>
-              </Swiper>
-            </div>
-
             <div class="search-bar page-lite">
               <input v-model="searchKeyword" type="text" placeholder="搜索教程标题或关键词..." class="search-input" />
             </div>
@@ -51,16 +33,18 @@
             <div v-else class="tutorial-grid">
               <article class="tutorial-card page-lite" v-for="item in filteredTutorials" :key="item.id" @click="openTutorialDetail(item.id)">
                 <div v-if="item.mediaUrl" class="card-media">
-                  <img v-if="item.mediaType === 'IMAGE'" :src="item.mediaUrl" :alt="item.title" />
-                  <video v-else-if="item.mediaType === 'VIDEO'" :src="item.mediaUrl" muted playsinline preload="metadata" />
-                  <span class="media-badge">{{ item.mediaType === 'VIDEO' ? '视频' : '图片' }}</span>
+                  <video v-if="item.mediaType === 'VIDEO'" :src="item.mediaUrl" muted playsinline preload="metadata" />
+                  <img v-else :src="item.mediaUrl" :alt="item.title" />
                 </div>
-                <div class="card-thumb" :style="{ background: item.backgroundStyle }">{{ item.tag }}</div>
                 <div class="card-body">
+                  <div class="card-tags">
+                    <span class="card-chip category-chip">{{ getCategoryLabel(item.categoryCode) }}</span>
+                    <span v-if="item.mediaUrl && item.tag" class="card-chip">{{ item.tag }}</span>
+                  </div>
                   <div class="card-title-row">
                     <h3 class="card-title">{{ item.title }}</h3>
                     <button class="fav-btn" :class="{ faved: favoriteIdSet.has(item.id) }" @click.stop="toggleFavorite(item.id)">
-                      {{ favoriteIdSet.has(item.id) ? '❤' : '♡' }}
+                      {{ favoriteIdSet.has(item.id) ? '已收藏' : '收藏' }}
                     </button>
                   </div>
                   <p class="card-desc">{{ item.description }}</p>
@@ -165,12 +149,8 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../../../layouts/AppLayout.vue'
 import FloatingBall from '../../../shared/components/FloatingBall.vue'
-import { Swiper, SwiperSlide } from 'swiper/vue'
-import { Autoplay, Pagination } from 'swiper/modules'
 import { aiChat, fetchTutorials, type AiChatMessage, type TutorialItem } from '../api'
 import { useBuyerFavoritesStore } from '../stores/useBuyerFavoritesStore'
-import 'swiper/css'
-import 'swiper/css/pagination'
 
 const categories = [
   { key: 'all', icon: '📘', label: '全部教程' },
@@ -205,6 +185,19 @@ function formatDuration(durationMinutes: number | null) {
   return durationMinutes ? `${durationMinutes} 分钟` : '图文教程'
 }
 
+function getCategoryLabel(code: string | null) {
+  const map: Record<string, string> = {
+    seed: '播种入门',
+    care: '日常养护',
+    pest: '病虫防治',
+    advanced: '进阶技巧',
+    seasonal: '四季指南',
+    tool: '工具推荐'
+  }
+  if (!code) return '全部教程'
+  return map[code] || code
+}
+
 function toggleFavorite(id: number) {
   favoritesStore.toggleTutorial(id)
 }
@@ -221,7 +214,7 @@ async function loadTutorials() {
     hotTutorials.value = res.hotTutorials
     tutorials.value = res.tutorials
     favoritesStore.seedTutorialFavoritesIfEmpty(
-      res.tutorials
+      [...res.hotTutorials, ...res.tutorials]
         .filter((item) => item.favoriteDefault)
         .map((item) => item.id)
     )
@@ -233,7 +226,11 @@ async function loadTutorials() {
 }
 
 const filteredTutorials = computed(() => {
-  let list = tutorials.value
+  const dedupeMap = new Map<number, TutorialItem>()
+  for (const item of hotTutorials.value) dedupeMap.set(item.id, item)
+  for (const item of tutorials.value) dedupeMap.set(item.id, item)
+
+  let list = Array.from(dedupeMap.values())
   if (activeCategory.value === 'favorite') {
     list = list.filter((item) => favoriteIdSet.value.has(item.id))
   } else if (activeCategory.value !== 'all') {
@@ -383,40 +380,6 @@ function scrollChatToBottom() {
   padding-right: 6px;
 }
 
-.carousel-section {
-  padding: 12px;
-  overflow: hidden;
-}
-
-.tutorial-swiper {
-  width: 100%;
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-.slide-card {
-  padding: 32px 28px;
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 10px;
-  color: #fff;
-}
-
-.slide-tag {
-  font-size: 12px;
-  font-weight: 700;
-  opacity: 0.85;
-  background: rgba(255, 255, 255, 0.2);
-  width: fit-content;
-  padding: 3px 10px;
-  border-radius: 999px;
-}
-
-.slide-title { margin: 0; font-size: 26px; font-weight: 700; }
-.slide-desc { margin: 0; font-size: 15px; line-height: 1.6; opacity: 0.92; max-width: 480px; }
-
 .advice-panel {
   display: grid;
   gap: 16px;
@@ -523,19 +486,22 @@ function scrollChatToBottom() {
 }
 
 .tutorial-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 320px));
-  justify-content: start;
-  gap: 14px;
+  column-width: 260px;
+  column-gap: 14px;
 }
 
 .tutorial-card {
-  display: grid;
+  display: inline-block;
+  width: 100%;
   gap: 0;
   padding: 0;
   overflow: hidden;
   cursor: pointer;
   transition: box-shadow 0.2s;
+  margin: 0 0 14px;
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .tutorial-card:hover { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); }
@@ -554,41 +520,44 @@ function scrollChatToBottom() {
   display: block;
 }
 
-.media-badge {
-  position: absolute;
-  left: 10px;
-  top: 10px;
+.card-body { padding: 0 16px 16px; display: grid; gap: 8px; }
+.card-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.card-chip {
+  padding: 3px 10px;
   border-radius: 999px;
-  padding: 2px 8px;
-  background: rgba(17, 24, 39, 0.65);
-  color: #fff;
   font-size: 12px;
   font-weight: 700;
+  color: #466052;
+  background: #edf3ef;
 }
-
-.card-thumb {
-  padding: 20px 16px;
-  font-size: 13px;
-  font-weight: 700;
+.category-chip {
   color: #1f7a41;
+  background: #e7f5ec;
 }
-
-.card-body { padding: 0 16px 16px; display: grid; gap: 8px; }
 .card-title { margin: 0; font-size: 16px; color: #1f2937; }
 
 .card-title-row { display: flex; justify-content: space-between; align-items: start; gap: 6px; }
 
 .fav-btn {
-  background: transparent;
-  border: none;
-  padding: 0;
-  font-size: 18px;
+  border-radius: 999px;
+  border: 1px solid #dbe7dd;
+  background: #f8fbf8;
+  color: #55735f;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
   flex-shrink: 0;
   line-height: 1;
 }
 
-.fav-btn:hover { transform: scale(1.2); }
+.fav-btn.faved {
+  border-color: #ffccd5;
+  background: #fff2f4;
+  color: #d14863;
+}
+
+.fav-btn:hover { opacity: 0.9; }
 .card-desc { margin: 0; font-size: 13px; color: #6b7280; line-height: 1.6; }
 
 .card-meta {
@@ -761,8 +730,7 @@ function scrollChatToBottom() {
   }
 
   .tutorial-grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 320px));
-    justify-content: start;
+    column-width: 240px;
   }
 }
 
@@ -798,21 +766,9 @@ function scrollChatToBottom() {
 }
 
 @media (max-width: 680px) {
-  .carousel-section {
-    padding: 10px;
-  }
-
-  .slide-card {
-    min-height: 180px;
-    padding: 24px 18px;
-  }
-
-  .slide-title {
-    font-size: 22px;
-  }
-
   .tutorial-grid {
-    grid-template-columns: 1fr;
+    column-count: 1;
+    column-width: auto;
   }
 }
 </style>

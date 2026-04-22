@@ -30,10 +30,17 @@
         </header>
 
         <article class="page-lite detail-content">
-          <section v-if="detail.mediaUrl" class="media-block">
+          <section v-if="detail.mediaUrl || detail.detailVideoUrl" class="media-block">
             <h2>教程演示</h2>
-            <img v-if="detail.mediaType === 'IMAGE'" :src="detail.mediaUrl" :alt="detail.title" />
-            <video v-else-if="detail.mediaType === 'VIDEO'" :src="detail.mediaUrl" controls />
+            <template v-if="detail.mediaUrl">
+              <h3 class="media-subtitle">封面图</h3>
+              <img v-if="detail.mediaType !== 'VIDEO'" :src="detail.mediaUrl" :alt="detail.title" />
+              <video v-else :src="detail.mediaUrl" controls />
+            </template>
+            <template v-if="detail.detailVideoUrl">
+              <h3 class="media-subtitle">视频讲解</h3>
+              <video :src="detail.detailVideoUrl" controls />
+            </template>
           </section>
 
           <h2>教程内容</h2>
@@ -125,6 +132,12 @@ onMounted(loadDetail)
 .media-block {
   display: grid;
   gap: 10px;
+}
+
+.media-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #374151;
 }
 
 .media-block img,

@@ -38,6 +38,7 @@ export interface AdminTutorial {
     backgroundStyle: string | null;
     mediaUrl: string | null;
     mediaType: 'IMAGE' | 'VIDEO' | null;
+    detailVideoUrl: string | null;
     favoriteDefault: boolean;
     published: boolean;
     createdAt: string | null;
@@ -174,6 +175,13 @@ export declare function createPromotion(payload: {
     description: string;
     imageUrl: string;
 }): Promise<import("axios").AxiosResponse<any, any, {}>>;
+export declare function updatePromotion(id: number, payload: {
+    title: string;
+    strategyType: string;
+    description: string;
+    imageUrl: string;
+}): Promise<import("axios").AxiosResponse<any, any, {}>>;
+export declare function deletePromotion(id: number): Promise<import("axios").AxiosResponse<any, any, {}>>;
 export declare function fetchPromotionPosts(): Promise<AdminPromotionPost[]>;
 export declare function createPromotionPost(payload: {
     promotionId: number;
@@ -201,6 +209,7 @@ export declare function createTutorial(payload: {
     backgroundStyle: string;
     mediaUrl: string | null;
     mediaType: 'IMAGE' | 'VIDEO' | null;
+    detailVideoUrl: string | null;
     favoriteDefault: boolean;
     published: boolean;
 }): Promise<import("axios").AxiosResponse<any, any, {}>>;
@@ -216,6 +225,7 @@ export declare function updateTutorial(id: number, payload: {
     backgroundStyle: string;
     mediaUrl: string | null;
     mediaType: 'IMAGE' | 'VIDEO' | null;
+    detailVideoUrl: string | null;
     favoriteDefault: boolean;
     published: boolean;
 }): Promise<import("axios").AxiosResponse<any, any, {}>>;

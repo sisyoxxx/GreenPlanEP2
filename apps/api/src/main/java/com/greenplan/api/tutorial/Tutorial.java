@@ -50,6 +50,9 @@ public class Tutorial {
     @Column(name = "media_type", length = 16)
     private String mediaType;
 
+    @Column(name = "detail_video_url", columnDefinition = "MEDIUMTEXT")
+    private String detailVideoUrl;
+
     @Column(name = "favorite_default", nullable = false)
     private boolean favoriteDefault;
 

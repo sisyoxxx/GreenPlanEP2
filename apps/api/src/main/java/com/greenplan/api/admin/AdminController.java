@@ -72,6 +72,27 @@ public class AdminController {
         return ApiResponse.ok("Promotion created", adminService.createPromotion(request, (JwtUserPrincipal) authentication.getPrincipal()));
     }
 
+    @PutMapping("/admin/promotions/{promotionId}")
+    public ApiResponse<Promotion> updatePromotion(
+            @PathVariable Long promotionId,
+            @Valid @RequestBody PromotionRequest request,
+            Authentication authentication
+    ) {
+        return ApiResponse.ok(
+                "Promotion updated",
+                adminService.updatePromotion(promotionId, request, (JwtUserPrincipal) authentication.getPrincipal())
+        );
+    }
+
+    @DeleteMapping("/admin/promotions/{promotionId}")
+    public ApiResponse<Void> deletePromotion(
+            @PathVariable Long promotionId,
+            Authentication authentication
+    ) {
+        adminService.deletePromotion(promotionId, (JwtUserPrincipal) authentication.getPrincipal());
+        return ApiResponse.ok("Promotion deleted", null);
+    }
+
     @GetMapping("/promotion-posts")
     public ApiResponse<List<PromotionPost>> promotionPosts() {
         return ApiResponse.ok(adminService.listPromotionPosts());

@@ -1,0 +1,41 @@
+
+> greenplanep2-web@0.1.0 dev
+> vite --configLoader native
+
+
+  [32m[1mVITE[22m v6.4.2[39m  [2mready in [0m[1m2142[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5175[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+  ➜  Vue DevTools: Open http://localhost:5175/__devtools__/ as a separate window
+  ➜  Vue DevTools: Press Alt(⌥)+Shift(⇧)+D in App to toggle the Vue DevTools
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m20:36:08[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/views/ProductsView.vue?vue&type=style&index=0&scoped=a9ad369b&lang.css[22m
+[2m20:49:13[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/views/BuyerHomeView.vue, /src/domains/buyer/views/BuyerHomeView.vue?vue&type=style&index=0&scoped=ae9fec29&lang.css[22m
+[2m20:52:56[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/admin/views/AdminProductsView.vue[22m
+[2m20:53:07[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/admin/views/AdminProductsView.vue[22m
+[2m20:54:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/admin/views/AdminProductsView.vue[22m
+[2m20:56:00[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/admin/views/AdminProductsView.vue[22m
+[2m20:56:39[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/admin/views/AdminProductsView.vue[22m
+[2m21:01:48[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/views/BuyerHomeView.vue, /src/domains/buyer/views/ProductsView.vue, /src/domains/buyer/views/TutorialView.vue, /src/domains/buyer/views/CommunityView.vue, /src/domains/buyer/views/ProfileView.vue, /src/domains/buyer/views/OrdersView.vue[22m
+[2m21:01:49[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/admin/views/AdminDashboardView.vue, /src/domains/admin/views/AdminTutorialsView.vue, /src/domains/admin/views/AdminProductsView.vue, /src/domains/admin/views/AdminOrdersView.vue, /src/domains/admin/views/AdminAnnouncementsView.vue, /src/domains/admin/views/AdminPromotionsView.vue[22m
+[2m21:03:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/admin/views/AdminProductsView.vue, /src/domains/admin/views/AdminProductsView.vue?vue&type=style&index=0&scoped=80ed2ebd&lang.css[22m
+[2m21:23:54[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/admin/views/AdminAnnouncementsView.vue, /src/domains/admin/views/AdminAnnouncementsView.vue?vue&type=style&index=0&scoped=94cf82c3&lang.css[22m
+[2m21:24:29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/views/BuyerHomeView.vue, /src/domains/buyer/views/ProductsView.vue, /src/domains/buyer/views/TutorialView.vue, /src/domains/buyer/views/CommunityView.vue, /src/domains/buyer/views/ProfileView.vue, /src/domains/buyer/views/OrdersView.vue[22m
+[2m21:24:29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/admin/views/AdminDashboardView.vue, /src/domains/admin/views/AdminTutorialsView.vue, /src/domains/admin/views/AdminProductsView.vue, /src/domains/admin/views/AdminOrdersView.vue, /src/domains/admin/views/AdminAnnouncementsView.vue, /src/domains/admin/views/AdminPromotionsView.vue[22m
+[2m21:43:40[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/inventory/views/InventoryItemsView.vue, /src/domains/inventory/views/InventoryItemsView.vue?vue&type=style&index=0&scoped=939a437a&lang.css[22m
+[2m21:44:02[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/views/BuyerHomeView.vue, /src/domains/buyer/views/ProductsView.vue, /src/domains/buyer/views/TutorialView.vue, /src/domains/buyer/views/CommunityView.vue, /src/domains/buyer/views/ProfileView.vue, /src/domains/buyer/views/OrdersView.vue[22m
+[2m21:44:02[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/admin/views/AdminDashboardView.vue, /src/domains/admin/views/AdminTutorialsView.vue, /src/domains/admin/views/AdminProductsView.vue, /src/domains/admin/views/AdminOrdersView.vue, /src/domains/admin/views/AdminAnnouncementsView.vue, /src/domains/admin/views/AdminPromotionsView.vue[22m
+[2m09:17:56[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/views/ProductsView.vue[22m
+[2m09:18:04[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/views/BuyerHomeView.vue[22m
+[2m09:18:14[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/views/ProductDetailView.vue[22m
+[2m09:18:52[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/views/BuyerHomeView.vue, /src/domains/buyer/views/ProductsView.vue, /src/domains/buyer/views/TutorialView.vue, /src/domains/buyer/views/CommunityView.vue, /src/domains/buyer/views/ProfileView.vue, /src/domains/buyer/views/OrdersView.vue, /src/domains/buyer/views/ProductDetailView.vue[22m
+[2m09:18:53[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/admin/views/AdminDashboardView.vue, /src/domains/admin/views/AdminTutorialsView.vue, /src/domains/admin/views/AdminProductsView.vue, /src/domains/admin/views/AdminOrdersView.vue, /src/domains/admin/views/AdminAnnouncementsView.vue, /src/domains/admin/views/AdminPromotionsView.vue[22m
+[2m10:23:03[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/components/HomeCategorySidebar.vue, /src/domains/buyer/components/HomeCategorySidebar.vue?vue&type=style&index=0&scoped=06d7a197&lang.css[22m
+[2m10:23:13[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/components/HomeRecommendationRail.vue, /src/domains/buyer/components/HomeRecommendationRail.vue?vue&type=style&index=0&scoped=3334d368&lang.css[22m
+[2m10:24:27[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/components/HomeRecommendationRail.vue, /src/domains/buyer/components/HomeRecommendationRail.vue?vue&type=style&index=0&scoped=3334d368&lang.css[22m
+[2m10:25:14[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/components/HomeCategorySidebar.vue[22m
+[2m10:27:06[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/components/HomeRecommendationRail.vue, /src/domains/buyer/components/HomeRecommendationRail.vue?vue&type=style&index=0&scoped=3334d368&lang.css[22m
+[2m10:27:47[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/views/BuyerHomeView.vue, /src/domains/buyer/views/ProductsView.vue, /src/domains/buyer/views/TutorialView.vue, /src/domains/buyer/views/CommunityView.vue, /src/domains/buyer/views/ProfileView.vue, /src/domains/buyer/views/OrdersView.vue, /src/domains/buyer/views/ProductDetailView.vue, /src/domains/buyer/components/HomeRecommendationRail.vue[22m
+[2m10:27:47[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/admin/views/AdminDashboardView.vue, /src/domains/admin/views/AdminTutorialsView.vue, /src/domains/admin/views/AdminProductsView.vue, /src/domains/admin/views/AdminOrdersView.vue, /src/domains/admin/views/AdminAnnouncementsView.vue, /src/domains/admin/views/AdminPromotionsView.vue[22m
+[2m11:49:43[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/domains/buyer/components/HomeRecommendationRail.vue[22m
