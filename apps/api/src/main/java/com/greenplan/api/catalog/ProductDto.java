@@ -10,9 +10,13 @@ public record ProductDto(
         BigDecimal price,
         String status,
         String category,
+        String variety,
         String plantingMonth,
         String suitableRegion,
+        String origin,
+        BigDecimal germinationRate,
         String imageUrl,
-        Integer onlineStock
+        Integer onlineStock,
+        Integer sales
 ) {
 }

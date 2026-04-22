@@ -3,7 +3,7 @@
     <section class="page-head">
       <div>
         <h2 class="page-title">公告管理</h2>
-        <p class="page-desc">当前列表直接读取后端公告表，发布后会同步到社区公告展示条。</p>
+        <p class="page-desc">已发布公告支持编辑与删除，修改后会同步到前台公告展示。</p>
       </div>
       <button class="secondary-btn" @click="loadAnnouncements" :disabled="loading">
         {{ loading ? '刷新中...' : '刷新列表' }}
@@ -11,14 +11,14 @@
     </section>
 
     <section class="page-lite editor-card">
-      <h3>发布公告</h3>
+      <h3>{{ editingId ? '编辑公告' : '发布公告' }}</h3>
       <input v-model.trim="form.title" placeholder="请输入公告标题" />
       <textarea v-model.trim="form.content" rows="4" placeholder="请输入公告内容"></textarea>
       <div class="form-actions">
         <button @click="submitAnnouncement" :disabled="submitting">
-          {{ submitting ? '发布中...' : '发布公告' }}
+          {{ submitting ? '提交中...' : editingId ? '保存修改' : '发布公告' }}
         </button>
-        <button class="secondary-btn" @click="resetForm" :disabled="submitting">清空</button>
+        <button class="secondary-btn" @click="resetForm" :disabled="submitting">{{ editingId ? '取消编辑' : '清空' }}</button>
       </div>
       <p v-if="message" class="message">{{ message }}</p>
     </section>
@@ -41,6 +41,7 @@
               <th>内容</th>
               <th>状态</th>
               <th>发布时间</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -51,6 +52,15 @@
                 <span class="status-badge">{{ item.status }}</span>
               </td>
               <td class="cell-time">{{ formatDateTime(item.publishedAt || item.createdAt) }}</td>
+              <td>
+                <div v-if="item.status === 'PUBLISHED'" class="row-actions">
+                  <button class="text-link" @click="startEdit(item)" :disabled="submitting || deletingId === item.id">编辑</button>
+                  <button class="text-link danger" @click="removeAnnouncement(item)" :disabled="submitting || deletingId === item.id">
+                    {{ deletingId === item.id ? '删除中...' : '删除' }}
+                  </button>
+                </div>
+                <span v-else class="cell-time">-</span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -62,11 +72,19 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import AdminLayout from '../../../layouts/AdminLayout.vue'
-import { createAnnouncement, fetchAnnouncements, type AdminAnnouncement } from '../api'
+import {
+  createAnnouncement,
+  deleteAnnouncement,
+  fetchAnnouncements,
+  type AdminAnnouncement,
+  updateAnnouncement
+} from '../api'
 
 const announcements = ref<AdminAnnouncement[]>([])
 const loading = ref(false)
 const submitting = ref(false)
+const deletingId = ref<number | null>(null)
+const editingId = ref<number | null>(null)
 const error = ref('')
 const message = ref('')
 
@@ -92,6 +110,17 @@ async function loadAnnouncements() {
   }
 }
 
+function startEdit(item: AdminAnnouncement) {
+  if (item.status !== 'PUBLISHED') {
+    message.value = '只有已发布公告支持编辑'
+    return
+  }
+  editingId.value = item.id
+  form.title = item.title
+  form.content = item.content
+  message.value = ''
+}
+
 async function submitAnnouncement() {
   message.value = ''
   if (!form.title || !form.content) {
@@ -101,21 +130,53 @@ async function submitAnnouncement() {
 
   submitting.value = true
   try {
-    await createAnnouncement({
-      title: form.title,
-      content: form.content
-    })
+    if (editingId.value) {
+      await updateAnnouncement(editingId.value, {
+        title: form.title,
+        content: form.content
+      })
+      message.value = '公告已更新'
+    } else {
+      await createAnnouncement({
+        title: form.title,
+        content: form.content
+      })
+      message.value = '公告已发布'
+    }
     resetForm()
-    message.value = '公告已发布'
     await loadAnnouncements()
   } catch (err: any) {
-    message.value = err?.response?.data?.message || '公告发布失败'
+    message.value = err?.response?.data?.message || (editingId.value ? '公告更新失败' : '公告发布失败')
   } finally {
     submitting.value = false
   }
 }
 
+async function removeAnnouncement(item: AdminAnnouncement) {
+  if (item.status !== 'PUBLISHED') {
+    message.value = '只有已发布公告支持删除'
+    return
+  }
+
+  const ok = window.confirm(`确认删除公告「${item.title}」吗？`)
+  if (!ok) return
+
+  deletingId.value = item.id
+  message.value = ''
+  try {
+    await deleteAnnouncement(item.id)
+    message.value = '公告已删除'
+    if (editingId.value === item.id) resetForm()
+    await loadAnnouncements()
+  } catch (err: any) {
+    message.value = err?.response?.data?.message || '公告删除失败'
+  } finally {
+    deletingId.value = null
+  }
+}
+
 function resetForm() {
+  editingId.value = null
   form.title = ''
   form.content = ''
 }
@@ -153,7 +214,8 @@ function formatDateTime(value: string | null) {
 }
 
 .table-head,
-.form-actions {
+.form-actions,
+.row-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -243,5 +305,17 @@ function formatDateTime(value: string | null) {
   background: #f2f6f2;
   border: 1px solid #e3e8e3;
   color: #1f2937;
+}
+
+.text-link {
+  border: none;
+  background: transparent;
+  color: #1f7a41;
+  padding: 0;
+  font-size: 13px;
+}
+
+.text-link.danger {
+  color: #dc2626;
 }
 </style>

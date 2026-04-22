@@ -57,8 +57,11 @@ export interface AdminProduct {
   price: number
   status: string
   category: string
+  variety: string
   plantingMonth: string
   suitableRegion: string
+  origin: string
+  germinationRate: number
   imageUrl: string
   onlineStock: number
 }
@@ -119,8 +122,26 @@ export interface StaffProfile {
   avatarDataUrl: string | null
 }
 
+export interface SalesOverviewRow {
+  productId: number
+  name: string
+  category: string
+  sales: number
+}
+
+export interface SalesOverview {
+  totalOrders: number
+  totalUnits: number
+  grossSales: number
+  avgOrder: number
+  topCategory: string
+  totalProducts: number
+  top10: SalesOverviewRow[]
+  slowMoving: SalesOverviewRow[]
+}
+
 export async function fetchSalesOverview() {
-  const res = await http.get('/api/admin/reports/sales/overview') as { data: any }
+  const res = await http.get('/api/admin/reports/sales/overview') as { data: SalesOverview }
   return res.data
 }
 
@@ -133,14 +154,25 @@ export async function createAnnouncement(payload: { title: string; content: stri
   return http.post('/api/admin/announcements', payload)
 }
 
+export async function updateAnnouncement(id: number, payload: { title: string; content: string }) {
+  return http.put(`/api/admin/announcements/${id}`, payload)
+}
+
+export async function deleteAnnouncement(id: number) {
+  return http.delete(`/api/admin/announcements/${id}`)
+}
+
 export async function createProduct(payload: {
   sku: string
   name: string
   description: string
   price: number
   category: string
+  variety: string
   plantingMonth: string
   suitableRegion: string
+  origin: string
+  germinationRate: number
   imageUrl: string
   initialStock: number
 }) {
@@ -160,8 +192,11 @@ export async function updateProduct(
     description: string
     price: number
     category: string
+    variety: string
     plantingMonth: string
     suitableRegion: string
+    origin: string
+    germinationRate: number
     imageUrl: string
     initialStock: number
   }

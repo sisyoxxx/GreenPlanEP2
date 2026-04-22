@@ -12,20 +12,30 @@
           <h2 class="section-title">库存列表</h2>
           <p class="section-subtitle">统一查看所有商品库存，并支持直接执行快速入库与预警调整。</p>
         </div>
-        <span class="count-pill">共 {{ rows.length }} 个商品</span>
+        <span class="count-pill">显示 {{ filteredRows.length }} / {{ rows.length }} 个商品</span>
+      </div>
+
+      <div class="search-row">
+        <input
+          v-model.trim="keyword"
+          class="search-input"
+          type="search"
+          placeholder="搜索商品名 / SKU / 商品ID"
+          aria-label="搜索库存商品"
+        />
       </div>
 
       <div v-if="loading" class="empty">库存数据加载中...</div>
       <div v-else-if="rows.length === 0 && !error" class="empty">暂无库存数据</div>
 
-      <div v-else-if="rows.length > 0" class="table">
+      <div v-else-if="filteredRows.length > 0" class="table">
         <div class="thead">
           <div>商品</div>
           <div class="right">在线库存</div>
           <div class="right">预警阈值</div>
           <div class="right">操作</div>
         </div>
-        <div class="trow" v-for="row in rows" :key="row.productId">
+        <div class="trow" v-for="row in filteredRows" :key="row.productId">
           <div class="name">
             <div class="title">{{ row.name }}</div>
             <div class="sub">ID: {{ row.productId }} · SKU: {{ row.sku || '-' }}</div>
@@ -42,6 +52,8 @@
           </div>
         </div>
       </div>
+
+      <div v-else-if="rows.length > 0 && !error" class="empty">暂无匹配商品</div>
 
       <div v-if="error" class="error-card">
         <p class="error-title">库存列表加载失败</p>
@@ -115,6 +127,7 @@ const loading = ref(false)
 const submitting = ref(false)
 const error = ref('')
 const message = ref('')
+const keyword = ref('')
 
 const rows = ref<InventoryRow[]>([])
 const activeInbound = ref<InventoryRow | null>(null)
@@ -124,6 +137,16 @@ const inboundForm = reactive({ quantity: 10, note: '' })
 const thresholdForm = reactive({ warningThreshold: 5 })
 
 const showAuthHint = computed(() => /401|403|unauthorized|forbidden|登录|过期/i.test(error.value))
+const filteredRows = computed(() => {
+  const kw = keyword.value.trim().toLowerCase()
+  if (!kw) return rows.value
+
+  return rows.value.filter((row) => {
+    return [row.name, row.sku || '', String(row.productId)].some((value) =>
+      String(value).toLowerCase().includes(kw)
+    )
+  })
+})
 
 function buildErrorMessage(errorLike: any, fallback: string) {
   const status = errorLike?.response?.status
@@ -244,6 +267,16 @@ onMounted(reload)
   color: #1f7a41;
   font-size: 12px;
   font-weight: 700;
+}
+
+.search-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.search-input {
+  flex: 1;
 }
 
 .table {

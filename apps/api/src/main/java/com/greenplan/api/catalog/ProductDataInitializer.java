@@ -2,6 +2,7 @@ package com.greenplan.api.catalog;
 
 import com.greenplan.api.inventory.InventoryItem;
 import com.greenplan.api.inventory.InventoryItemRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -14,160 +15,204 @@ public class ProductDataInitializer implements ApplicationRunner {
 
     private final ProductRepository productRepository;
     private final InventoryItemRepository inventoryItemRepository;
+    private final boolean productsSeedEnabled;
 
-    public ProductDataInitializer(ProductRepository productRepository, InventoryItemRepository inventoryItemRepository) {
+    public ProductDataInitializer(
+            ProductRepository productRepository,
+            InventoryItemRepository inventoryItemRepository,
+            @Value("${app.seed.products-enabled:false}") boolean productsSeedEnabled
+    ) {
         this.productRepository = productRepository;
         this.inventoryItemRepository = inventoryItemRepository;
+        this.productsSeedEnabled = productsSeedEnabled;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        if (!productsSeedEnabled) {
+            return;
+        }
+
         seedProduct(
                 "SEED-TOMATO-002",
-                "樱桃番茄种子",
-                "适合家庭阳台盆栽，果实小巧饱满，附带新手播种建议。",
+                "Cherry Tomato Seeds",
+                "Great for balcony planters, productive and beginner friendly.",
                 new BigDecimal("9.90"),
                 "VEGETABLE",
-                "春播",
-                "华东",
+                "Spring",
+                "East China",
                 "https://source.unsplash.com/1200x900/?tomato,seed",
                 120,
-                15
+                15,
+                "Cherry Tomato",
+                "Shouguang, Shandong",
+                new BigDecimal("93.00")
         );
         seedProduct(
                 "SEED-CUCUMBER-001",
-                "黄瓜种子",
-                "夏季生长势旺，适合庭院和大花盆种植，采收期稳定。",
+                "Cucumber Seeds",
+                "Fast summer growth, ideal for patio containers and home gardens.",
                 new BigDecimal("8.80"),
                 "VEGETABLE",
-                "夏播",
-                "华中",
+                "Summer",
+                "Central China",
                 "https://source.unsplash.com/1200x900/?cucumber,garden",
                 110,
-                12
+                12,
+                "Cucumber",
+                "Zhoukou, Henan",
+                new BigDecimal("91.00")
         );
         seedProduct(
                 "SEED-LETTUCE-001",
-                "生菜种子",
-                "发芽快、管理简单，适合新手入门和阳台小空间种植。",
+                "Lettuce Seeds",
+                "Quick sprouting and easy maintenance for small spaces.",
                 new BigDecimal("8.50"),
                 "VEGETABLE",
-                "秋播",
-                "华北",
+                "Autumn",
+                "North China",
                 "https://source.unsplash.com/1200x900/?lettuce,seedling",
                 96,
-                12
+                12,
+                "Butter Lettuce",
+                "Langfang, Hebei",
+                new BigDecimal("95.00")
         );
         seedProduct(
                 "SEED-PEPPER-001",
-                "彩椒种子",
-                "果色丰富，适合光照充足的阳台环境，观赏和食用兼顾。",
+                "Bell Pepper Seeds",
+                "Colorful fruits, suitable for sunny balconies and containers.",
                 new BigDecimal("10.80"),
                 "VEGETABLE",
-                "春播",
-                "华南",
+                "Spring",
+                "South China",
                 "https://source.unsplash.com/1200x900/?bell-pepper,plant",
                 72,
-                10
+                10,
+                "Bell Pepper",
+                "Nanning, Guangxi",
+                new BigDecimal("90.00")
         );
         seedProduct(
                 "SEED-BASIL-001",
-                "罗勒种子",
-                "适合厨房窗台和香草角落，香味浓郁，适合日常采摘。",
+                "Basil Seeds",
+                "Rich aroma and continuous harvest for kitchen windowsills.",
                 new BigDecimal("6.80"),
                 "HERB",
-                "冬季",
-                "华南",
+                "Winter",
+                "South China",
                 "https://source.unsplash.com/1200x900/?basil,herb",
                 88,
-                10
+                10,
+                "Sweet Basil",
+                "Kunming, Yunnan",
+                new BigDecimal("92.00")
         );
         seedProduct(
                 "SEED-MINT-001",
-                "薄荷种子",
-                "生长迅速、好打理，适合做家庭常备草本盆栽。",
+                "Mint Seeds",
+                "Vigorous growth and simple care for daily home use.",
                 new BigDecimal("6.50"),
                 "HERB",
-                "冬季",
-                "通用",
+                "Winter",
+                "All Regions",
                 "https://source.unsplash.com/1200x900/?mint,plant",
                 92,
-                10
+                10,
+                "Spearmint",
+                "Chengdu, Sichuan",
+                new BigDecimal("89.00")
         );
         seedProduct(
                 "SEED-SUNFLOWER-001",
-                "向日葵种子",
-                "花型明亮，适合打造阳台和庭院的季节氛围感。",
+                "Sunflower Seeds",
+                "Bright flowers that quickly elevate the mood of your garden.",
                 new BigDecimal("12.50"),
                 "FLOWER",
-                "春播",
-                "华北",
+                "Spring",
+                "North China",
                 "https://source.unsplash.com/1200x900/?sunflower,garden",
                 64,
-                8
+                8,
+                "Ornamental Sunflower",
+                "Chifeng, Inner Mongolia",
+                new BigDecimal("88.00")
         );
         seedProduct(
                 "SEED-LAVENDER-001",
-                "薰衣草种子",
-                "适合打造芳香花园，秋播后更利于来年成型。",
+                "Lavender Seeds",
+                "Fragrant blooms with excellent ornamental value.",
                 new BigDecimal("13.80"),
                 "FLOWER",
-                "秋播",
-                "西南",
+                "Autumn",
+                "Southwest China",
                 "https://source.unsplash.com/1200x900/?lavender,flower",
                 58,
-                8
+                8,
+                "Lavender",
+                "Dali, Yunnan",
+                new BigDecimal("86.00")
         );
         seedProduct(
                 "SEED-STRAWBERRY-001",
-                "草莓种子",
-                "适合家庭阳台体验结果乐趣，也适合作为草本类果实种植体验。",
+                "Strawberry Seeds",
+                "Great for home fruit-growing experiences on balconies.",
                 new BigDecimal("16.90"),
                 "HERB",
-                "春播",
-                "华东",
+                "Spring",
+                "East China",
                 "https://source.unsplash.com/1200x900/?strawberry,plant",
                 48,
-                6
+                6,
+                "Everbearing Strawberry",
+                "Dandong, Liaoning",
+                new BigDecimal("87.00")
         );
         seedProduct(
                 "TOOL-SPRAYER-001",
-                "园艺喷壶",
-                "细雾均匀，适合幼苗期补水、叶面保湿和日常养护。",
+                "Garden Sprayer",
+                "Fine mist for seedling watering and leaf moisture care.",
                 new BigDecimal("19.90"),
                 "TOOL",
-                "冬季",
-                "通用",
+                "All Year",
+                "All Regions",
                 "https://source.unsplash.com/1200x900/?gardening,spray-bottle",
                 42,
-                5
+                5,
+                "Standard Sprayer",
+                "Taizhou, Zhejiang",
+                new BigDecimal("100.00")
         );
-
-        // User requested: add fertilizer + succulent products with online image links.
         seedProduct(
                 "FERTILIZER-NUTRIENT-001",
-                "通用营养肥料（缓释型）",
-                "适合阳台蔬菜和花卉的通用营养补给，缓释配方更省心，适合新手稳定追肥。",
+                "General Nutrient Fertilizer",
+                "Slow-release formula for vegetables and flowers.",
                 new BigDecimal("29.90"),
                 "FERTILIZER",
-                "全年",
-                "通用",
+                "All Year",
+                "All Regions",
                 "https://images.pexels.com/photos/30801526/pexels-photo-30801526.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
                 66,
-                8
+                8,
+                "Slow-release Fertilizer",
+                "Linyi, Shandong",
+                new BigDecimal("100.00")
         );
         seedProduct(
                 "SUCCULENT-SET-001",
-                "多肉植物组合（3株）",
-                "精选耐养多肉组合，适合办公桌和窗台，低维护、观赏性强，附基础养护建议。",
+                "Succulent Plant Set (3pcs)",
+                "Low-maintenance desktop and windowsill succulent combination.",
                 new BigDecimal("39.90"),
                 "SUCCULENT",
-                "全年",
-                "通用",
+                "All Year",
+                "All Regions",
                 "https://images.pexels.com/photos/1400375/pexels-photo-1400375.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
                 54,
-                6
+                6,
+                "Mixed Succulent Set",
+                "Kunming, Yunnan",
+                new BigDecimal("85.00")
         );
     }
 
@@ -181,7 +226,10 @@ public class ProductDataInitializer implements ApplicationRunner {
             String suitableRegion,
             String imageUrl,
             int onlineStock,
-            int warningThreshold
+            int warningThreshold,
+            String variety,
+            String origin,
+            BigDecimal germinationRate
     ) {
         Product product = productRepository.findBySku(sku).orElseGet(Product::new);
         product.setSku(sku);
@@ -190,8 +238,11 @@ public class ProductDataInitializer implements ApplicationRunner {
         product.setPrice(price);
         product.setStatus("PUBLISHED");
         product.setCategory(category);
+        product.setVariety(variety);
         product.setPlantingMonth(plantingMonth);
         product.setSuitableRegion(suitableRegion);
+        product.setOrigin(origin);
+        product.setGerminationRate(germinationRate);
         product.setImageUrl(imageUrl);
 
         Product saved = productRepository.save(product);

@@ -58,6 +58,27 @@ public class AdminService {
     }
 
     @Transactional
+    public Announcement updateAnnouncement(Long announcementId, AnnouncementRequest request, JwtUserPrincipal principal) {
+        ensureAdmin(principal);
+        Announcement announcement = announcementRepository.findById(announcementId)
+                .orElseThrow(() -> new IllegalArgumentException("Announcement not found"));
+        ensurePublishedAnnouncement(announcement);
+        announcement.setTitle(request.title());
+        announcement.setContent(request.content());
+        announcement.setPublishedAt(LocalDateTime.now());
+        return announcementRepository.save(announcement);
+    }
+
+    @Transactional
+    public void deleteAnnouncement(Long announcementId, JwtUserPrincipal principal) {
+        ensureAdmin(principal);
+        Announcement announcement = announcementRepository.findById(announcementId)
+                .orElseThrow(() -> new IllegalArgumentException("Announcement not found"));
+        ensurePublishedAnnouncement(announcement);
+        announcementRepository.delete(announcement);
+    }
+
+    @Transactional
     public Promotion createPromotion(PromotionRequest request, JwtUserPrincipal principal) {
         ensureAdmin(principal);
         Promotion promotion = new Promotion();
@@ -119,6 +140,12 @@ public class AdminService {
     private void validatePostChannel(String channel) {
         if (!ALLOWED_POST_CHANNELS.contains(channel)) {
             throw new IllegalArgumentException("Unsupported promotion post channel");
+        }
+    }
+
+    private void ensurePublishedAnnouncement(Announcement announcement) {
+        if (!"PUBLISHED".equalsIgnoreCase(announcement.getStatus())) {
+            throw new IllegalArgumentException("Only published announcements can be edited or deleted");
         }
     }
 

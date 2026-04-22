@@ -38,6 +38,27 @@ public class AdminController {
         return ApiResponse.ok("Announcement created", adminService.createAnnouncement(request, (JwtUserPrincipal) authentication.getPrincipal()));
     }
 
+    @PutMapping("/admin/announcements/{announcementId}")
+    public ApiResponse<Announcement> updateAnnouncement(
+            @PathVariable Long announcementId,
+            @Valid @RequestBody AnnouncementRequest request,
+            Authentication authentication
+    ) {
+        return ApiResponse.ok(
+                "Announcement updated",
+                adminService.updateAnnouncement(announcementId, request, (JwtUserPrincipal) authentication.getPrincipal())
+        );
+    }
+
+    @DeleteMapping("/admin/announcements/{announcementId}")
+    public ApiResponse<Void> deleteAnnouncement(
+            @PathVariable Long announcementId,
+            Authentication authentication
+    ) {
+        adminService.deleteAnnouncement(announcementId, (JwtUserPrincipal) authentication.getPrincipal());
+        return ApiResponse.ok("Announcement deleted", null);
+    }
+
     @GetMapping("/promotions")
     public ApiResponse<List<Promotion>> promotions() {
         return ApiResponse.ok(adminService.listPromotions());

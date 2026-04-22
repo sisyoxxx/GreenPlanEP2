@@ -121,6 +121,8 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['left-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['hero-content']} */ ;
 /** @type {__VLS_StyleScopedClasses['section-head']} */ ;
+/** @type {__VLS_StyleScopedClasses['product-thumb']} */ ;
+/** @type {__VLS_StyleScopedClasses['product-cover-media']} */ ;
 /** @type {__VLS_StyleScopedClasses['left-sidebar']} */ ;
 /** @type {__VLS_StyleScopedClasses['home-shell']} */ ;
 /** @type {__VLS_StyleScopedClasses['hero-banner']} */ ;
@@ -222,7 +224,7 @@ if (__VLS_ctx.topProducts.length > 0) {
         });
         if (__VLS_ctx.hasDisplayImage(item.imageUrl)) {
             __VLS_asFunctionalElement(__VLS_intrinsicElements.img)({
-                ...{ class: "product-image" },
+                ...{ class: "product-image product-cover-media" },
                 src: (item.imageUrl),
                 alt: (item.name),
                 loading: "lazy",
@@ -230,7 +232,7 @@ if (__VLS_ctx.topProducts.length > 0) {
         }
         else {
             __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-                ...{ class: "product-thumb" },
+                ...{ class: "product-thumb product-cover-media" },
             });
             (__VLS_ctx.normalizeBuyerCategory(item.category));
         }
@@ -248,7 +250,7 @@ if (__VLS_ctx.topProducts.length > 0) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
         (__VLS_ctx.formatPrice(item.price));
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-        (item.onlineStock);
+        (item.sales ?? 0);
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
             ...{ class: "product-actions" },
         });
@@ -362,7 +364,9 @@ var __VLS_2;
 /** @type {__VLS_StyleScopedClasses['featured-product']} */ ;
 /** @type {__VLS_StyleScopedClasses['page-lite']} */ ;
 /** @type {__VLS_StyleScopedClasses['product-image']} */ ;
+/** @type {__VLS_StyleScopedClasses['product-cover-media']} */ ;
 /** @type {__VLS_StyleScopedClasses['product-thumb']} */ ;
+/** @type {__VLS_StyleScopedClasses['product-cover-media']} */ ;
 /** @type {__VLS_StyleScopedClasses['product-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['product-desc']} */ ;
 /** @type {__VLS_StyleScopedClasses['product-meta']} */ ;

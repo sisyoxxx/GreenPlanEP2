@@ -18,6 +18,8 @@ spring:
     enabled: false
 
 app:
+  seed:
+    products-enabled: false
   jwt:
     secret: 0123456789012345678901234567890123456789012345678901234567890123
     access-expiration-minutes: 120

@@ -146,7 +146,7 @@
                 <div class="product-extra-meta">
                   <span>播种：{{ item.plantingMonth || '未设置' }}</span>
                   <span>地区：{{ normalizeRegion(item.suitableRegion) }}</span>
-                  <span>库存：{{ item.onlineStock }}</span>
+                  <span>销量：{{ item.sales ?? 0 }}</span>
                 </div>
                 <div class="product-actions">
                   <button type="button" @click.stop="buyNow(item)">立即购买</button>
@@ -569,13 +569,15 @@ function goCheckout() {
 }
 
 .products-swiper-wrap {
-  padding: 16px 20px 28px;
-  overflow: hidden;
+  padding: 16px 20px 34px;
+  overflow: visible;
+  position: relative;
+  z-index: 2;
 }
 
 .products-swiper {
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .products-swiper-slide {
@@ -620,11 +622,21 @@ function goCheckout() {
   z-index: 1;
 }
 
+:deep(.products-swiper.swiper) {
+  overflow: visible;
+}
+
+:deep(.products-swiper .swiper-pagination) {
+  z-index: 5;
+}
+
 .products-search-bar {
   display: flex;
   gap: 12px;
   align-items: center;
   justify-content: space-between;
+  position: relative;
+  z-index: 1;
 }
 
 .products-search-bar input {

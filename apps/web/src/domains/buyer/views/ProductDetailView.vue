@@ -38,7 +38,11 @@
 
           <div class="product-extra-meta">
             <span>库存：{{ product.onlineStock }}</span>
+            <span>销量：{{ product.sales ?? 0 }}</span>
             <span>SKU：{{ product.sku }}</span>
+            <span>品种：{{ product.variety || '未设置' }}</span>
+            <span>产地：{{ product.origin || '未设置' }}</span>
+            <span>发芽率：{{ formatRate(product.germinationRate) }}</span>
           </div>
 
           <div class="purchase-panel">
@@ -258,6 +262,11 @@ function renderStars(rating: number) {
 
 function formatPrice(price: number) {
   return Number(price).toFixed(2)
+}
+
+function formatRate(rate: number | null | undefined) {
+  if (rate === null || rate === undefined || Number.isNaN(Number(rate))) return '未设置'
+  return `${Number(rate).toFixed(2)}%`
 }
 
 function formatDateTime(value: string | null) {

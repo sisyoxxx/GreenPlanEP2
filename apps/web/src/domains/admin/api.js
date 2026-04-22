@@ -10,6 +10,12 @@ export async function fetchAnnouncements() {
 export async function createAnnouncement(payload) {
     return http.post('/api/admin/announcements', payload);
 }
+export async function updateAnnouncement(id, payload) {
+    return http.put(`/api/admin/announcements/${id}`, payload);
+}
+export async function deleteAnnouncement(id) {
+    return http.delete(`/api/admin/announcements/${id}`);
+}
 export async function createProduct(payload) {
     return http.post('/api/admin/products', payload);
 }

@@ -4,7 +4,7 @@
       <section class="page-head page-lite">
         <div>
           <h2 class="page-title">商品管理</h2>
-          <p class="page-desc">与首页商品共用同一张表，编辑后前台会同步更新。</p>
+          <p class="page-desc">维护商品信息并同步到前台商品页、首页与购物流程。</p>
         </div>
         <div class="head-actions">
           <button class="secondary-btn" :disabled="loading" @click="loadProducts">{{ loading ? '刷新中...' : '刷新' }}</button>
@@ -21,13 +21,25 @@
           </label>
           <label>
             <span>SKU</span>
-            <input v-model.trim="form.sku" type="text" placeholder="如 GP-SEED-001" />
+            <input v-model.trim="form.sku" type="text" placeholder="如：GP-SEED-001" />
           </label>
           <label>
             <span>分类</span>
             <select v-model="form.category">
               <option v-for="c in categoryOptions" :key="c" :value="c">{{ c }}</option>
             </select>
+          </label>
+          <label>
+            <span>品种</span>
+            <input v-model.trim="form.variety" type="text" placeholder="如：樱桃番茄" />
+          </label>
+          <label>
+            <span>产地</span>
+            <input v-model.trim="form.origin" type="text" placeholder="如：山东寿光" />
+          </label>
+          <label>
+            <span>发芽率(%)</span>
+            <input v-model.number="form.germinationRate" type="number" min="0" max="100" step="0.01" />
           </label>
           <label>
             <span>价格</span>
@@ -63,7 +75,7 @@
 
       <section class="page-lite table-card">
         <div class="table-tools">
-          <input v-model.trim="keyword" type="text" placeholder="搜索商品名、SKU、分类" />
+          <input v-model.trim="keyword" type="text" placeholder="搜索商品名、SKU、分类、品种或产地" />
         </div>
 
         <p v-if="message" class="message">{{ message }}</p>
@@ -79,6 +91,9 @@
                 <th>商品</th>
                 <th>SKU</th>
                 <th>分类</th>
+                <th>品种</th>
+                <th>产地</th>
+                <th>发芽率</th>
                 <th>价格</th>
                 <th>库存</th>
                 <th>状态</th>
@@ -98,6 +113,9 @@
                 </td>
                 <td>{{ item.sku }}</td>
                 <td>{{ item.category || '-' }}</td>
+                <td>{{ item.variety || '-' }}</td>
+                <td>{{ item.origin || '-' }}</td>
+                <td>{{ Number(item.germinationRate || 0).toFixed(2) }}%</td>
                 <td>¥{{ Number(item.price).toFixed(2) }}</td>
                 <td>{{ item.onlineStock }}</td>
                 <td>
@@ -144,7 +162,7 @@ const displayProducts = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
   if (!kw) return products.value
   return products.value.filter((item) =>
-    [item.name, item.sku, item.category || '', item.description || '']
+    [item.name, item.sku, item.category || '', item.variety || '', item.origin || '', item.description || '']
       .some((text) => String(text).toLowerCase().includes(kw))
   )
 })
@@ -155,8 +173,11 @@ const form = reactive({
   description: '',
   price: 0,
   category: categoryOptions[0],
+  variety: '',
   plantingMonth: '全年',
   suitableRegion: '全国',
+  origin: '',
+  germinationRate: 85,
   imageUrl: '',
   initialStock: 0
 })
@@ -204,8 +225,11 @@ function startEdit(item: AdminProduct) {
   form.description = item.description || ''
   form.price = Number(item.price || 0)
   form.category = item.category || categoryOptions[0]
+  form.variety = item.variety || ''
   form.plantingMonth = item.plantingMonth || '全年'
   form.suitableRegion = item.suitableRegion || '全国'
+  form.origin = item.origin || ''
+  form.germinationRate = Number(item.germinationRate || 85)
   form.imageUrl = item.imageUrl || ''
   form.initialStock = Number(item.onlineStock || 0)
 }
@@ -217,8 +241,11 @@ function resetForm() {
   form.description = ''
   form.price = 0
   form.category = categoryOptions[0]
+  form.variety = ''
   form.plantingMonth = '全年'
   form.suitableRegion = '全国'
+  form.origin = ''
+  form.germinationRate = 85
   form.imageUrl = ''
   form.initialStock = 0
 }
@@ -232,8 +259,19 @@ async function submitProduct() {
   message.value = ''
   error.value = ''
 
-  if (!form.name || !form.sku || !form.category || !form.plantingMonth || !form.suitableRegion || form.price <= 0) {
-    error.value = '请完整填写必填项，并确保价格大于 0。'
+  if (
+    !form.name ||
+    !form.sku ||
+    !form.category ||
+    !form.variety ||
+    !form.plantingMonth ||
+    !form.suitableRegion ||
+    !form.origin ||
+    form.price <= 0 ||
+    Number(form.germinationRate) < 0 ||
+    Number(form.germinationRate) > 100
+  ) {
+    error.value = '请完整填写必填项，并确保价格和发芽率范围正确。'
     return
   }
 
@@ -244,8 +282,11 @@ async function submitProduct() {
     description: form.description,
     price: form.price,
     category: form.category,
+    variety: form.variety,
     plantingMonth: form.plantingMonth,
     suitableRegion: form.suitableRegion,
+    origin: form.origin,
+    germinationRate: Number(form.germinationRate),
     imageUrl: form.imageUrl,
     initialStock: Math.max(0, Number(form.initialStock || 0))
   }
@@ -420,36 +461,29 @@ label span {
   border: none;
   background: transparent;
   color: #1f7a41;
-  font-weight: 700;
-  cursor: pointer;
   padding: 0;
+  font-size: 13px;
 }
 
 .message {
   margin: 0;
   color: #1f7a41;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .error {
   margin: 0;
   color: #dc2626;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .empty-state {
-  padding: 20px 0;
   color: #6b7280;
   text-align: center;
+  padding: 24px 0;
 }
 
-.secondary-btn {
-  background: #f2f6f2;
-  border: 1px solid #e3e8e3;
-  color: #1f2937;
-}
-
-@media (max-width: 1180px) {
+@media (max-width: 1280px) {
   .form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -458,7 +492,7 @@ label span {
 @media (max-width: 760px) {
   .page-head {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
   }
 
   .form-grid {

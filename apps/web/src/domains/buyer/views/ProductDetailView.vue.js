@@ -113,6 +113,11 @@ function renderStars(rating) {
 function formatPrice(price) {
     return Number(price).toFixed(2);
 }
+function formatRate(rate) {
+    if (rate === null || rate === undefined || Number.isNaN(Number(rate)))
+        return '未设置';
+    return `${Number(rate).toFixed(2)}%`;
+}
 function formatDateTime(value) {
     if (!value)
         return '刚刚';
@@ -237,7 +242,15 @@ else if (__VLS_ctx.product) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
     (__VLS_ctx.product.onlineStock);
     __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+    (__VLS_ctx.product.sales ?? 0);
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
     (__VLS_ctx.product.sku);
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+    (__VLS_ctx.product.variety || '未设置');
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+    (__VLS_ctx.product.origin || '未设置');
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
+    (__VLS_ctx.formatRate(__VLS_ctx.product.germinationRate));
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "purchase-panel" },
     });
@@ -499,6 +512,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             addToCart: addToCart,
             renderStars: renderStars,
             formatPrice: formatPrice,
+            formatRate: formatRate,
             formatDateTime: formatDateTime,
             goProducts: goProducts,
             goCart: goCart,

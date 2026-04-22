@@ -227,6 +227,8 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['products-swiper']} */ ;
 /** @type {__VLS_StyleScopedClasses['products-swiper']} */ ;
 /** @type {__VLS_StyleScopedClasses['products-swiper']} */ ;
+/** @type {__VLS_StyleScopedClasses['products-swiper']} */ ;
+/** @type {__VLS_StyleScopedClasses['products-swiper']} */ ;
 /** @type {__VLS_StyleScopedClasses['products-search-bar']} */ ;
 /** @type {__VLS_StyleScopedClasses['month-tip']} */ ;
 /** @type {__VLS_StyleScopedClasses['month-tip']} */ ;
@@ -549,7 +551,7 @@ else {
             __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
             (__VLS_ctx.normalizeRegion(item.suitableRegion));
             __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
-            (item.onlineStock);
+            (item.sales ?? 0);
             __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                 ...{ class: "product-actions" },
             });

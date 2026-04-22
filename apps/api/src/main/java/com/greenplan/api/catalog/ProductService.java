@@ -2,6 +2,7 @@ package com.greenplan.api.catalog;
 
 import com.greenplan.api.inventory.InventoryItem;
 import com.greenplan.api.inventory.InventoryItemRepository;
+import com.greenplan.api.orders.OrderItemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,10 +13,16 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final InventoryItemRepository inventoryItemRepository;
+    private final OrderItemRepository orderItemRepository;
 
-    public ProductService(ProductRepository productRepository, InventoryItemRepository inventoryItemRepository) {
+    public ProductService(
+            ProductRepository productRepository,
+            InventoryItemRepository inventoryItemRepository,
+            OrderItemRepository orderItemRepository
+    ) {
         this.productRepository = productRepository;
         this.inventoryItemRepository = inventoryItemRepository;
+        this.orderItemRepository = orderItemRepository;
     }
 
     public List<ProductDto> listPublished() {
@@ -46,8 +53,11 @@ public class ProductService {
         product.setPrice(request.price());
         product.setStatus("PUBLISHED");
         product.setCategory(request.category());
+        product.setVariety(request.variety());
         product.setPlantingMonth(request.plantingMonth());
         product.setSuitableRegion(request.suitableRegion());
+        product.setOrigin(request.origin());
+        product.setGerminationRate(request.germinationRate());
         product.setImageUrl(request.imageUrl());
         Product saved = productRepository.save(product);
 
@@ -69,8 +79,11 @@ public class ProductService {
         product.setDescription(request.description());
         product.setPrice(request.price());
         product.setCategory(request.category());
+        product.setVariety(request.variety());
         product.setPlantingMonth(request.plantingMonth());
         product.setSuitableRegion(request.suitableRegion());
+        product.setOrigin(request.origin());
+        product.setGerminationRate(request.germinationRate());
         product.setImageUrl(request.imageUrl());
         Product saved = productRepository.save(product);
 
@@ -101,6 +114,7 @@ public class ProductService {
         Integer stock = inventoryItemRepository.findByProductId(product.getId())
                 .map(InventoryItem::getOnlineStock)
                 .orElse(0);
+        Integer sales = orderItemRepository.sumQuantityByProductId(product.getId());
         return new ProductDto(
                 product.getId(),
                 product.getSku(),
@@ -109,10 +123,14 @@ public class ProductService {
                 product.getPrice(),
                 product.getStatus(),
                 product.getCategory(),
+                product.getVariety(),
                 product.getPlantingMonth(),
                 product.getSuitableRegion(),
+                product.getOrigin(),
+                product.getGerminationRate(),
                 product.getImageUrl(),
-                stock
+                stock,
+                sales == null ? 0 : sales
         );
     }
 }

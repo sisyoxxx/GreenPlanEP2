@@ -51,8 +51,11 @@ export interface AdminProduct {
     price: number;
     status: string;
     category: string;
+    variety: string;
     plantingMonth: string;
     suitableRegion: string;
+    origin: string;
+    germinationRate: number;
     imageUrl: string;
     onlineStock: number;
 }
@@ -107,20 +110,44 @@ export interface StaffProfile {
     phone: string | null;
     avatarDataUrl: string | null;
 }
-export declare function fetchSalesOverview(): Promise<any>;
+export interface SalesOverviewRow {
+    productId: number;
+    name: string;
+    category: string;
+    sales: number;
+}
+export interface SalesOverview {
+    totalOrders: number;
+    totalUnits: number;
+    grossSales: number;
+    avgOrder: number;
+    topCategory: string;
+    totalProducts: number;
+    top10: SalesOverviewRow[];
+    slowMoving: SalesOverviewRow[];
+}
+export declare function fetchSalesOverview(): Promise<SalesOverview>;
 export declare function fetchAnnouncements(): Promise<AdminAnnouncement[]>;
 export declare function createAnnouncement(payload: {
     title: string;
     content: string;
 }): Promise<import("axios").AxiosResponse<any, any, {}>>;
+export declare function updateAnnouncement(id: number, payload: {
+    title: string;
+    content: string;
+}): Promise<import("axios").AxiosResponse<any, any, {}>>;
+export declare function deleteAnnouncement(id: number): Promise<import("axios").AxiosResponse<any, any, {}>>;
 export declare function createProduct(payload: {
     sku: string;
     name: string;
     description: string;
     price: number;
     category: string;
+    variety: string;
     plantingMonth: string;
     suitableRegion: string;
+    origin: string;
+    germinationRate: number;
     imageUrl: string;
     initialStock: number;
 }): Promise<import("axios").AxiosResponse<any, any, {}>>;
@@ -131,8 +158,11 @@ export declare function updateProduct(id: number, payload: {
     description: string;
     price: number;
     category: string;
+    variety: string;
     plantingMonth: string;
     suitableRegion: string;
+    origin: string;
+    germinationRate: number;
     imageUrl: string;
     initialStock: number;
 }): Promise<import("axios").AxiosResponse<any, any, {}>>;

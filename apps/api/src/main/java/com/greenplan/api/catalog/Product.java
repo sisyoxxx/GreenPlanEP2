@@ -34,11 +34,20 @@ public class Product {
     @Column(length = 64)
     private String category;
 
+    @Column(length = 64)
+    private String variety;
+
     @Column(name = "planting_month", length = 32)
     private String plantingMonth;
 
     @Column(name = "suitable_region", length = 32)
     private String suitableRegion;
+
+    @Column(name = "origin_place", length = 64)
+    private String origin;
+
+    @Column(name = "germination_rate", precision = 5, scale = 2)
+    private BigDecimal germinationRate;
 
     @Column(name = "image_url", length = 255)
     private String imageUrl;

@@ -5,10 +5,14 @@ export interface Product {
     description: string;
     price: number;
     category: string;
+    variety: string;
     plantingMonth: string;
     suitableRegion: string;
+    origin: string;
+    germinationRate: number;
     imageUrl: string;
     onlineStock: number;
+    sales: number;
 }
 export interface TutorialItem {
     id: number;

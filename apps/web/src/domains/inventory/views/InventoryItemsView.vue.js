@@ -5,12 +5,21 @@ const loading = ref(false);
 const submitting = ref(false);
 const error = ref('');
 const message = ref('');
+const keyword = ref('');
 const rows = ref([]);
 const activeInbound = ref(null);
 const activeThreshold = ref(null);
 const inboundForm = reactive({ quantity: 10, note: '' });
 const thresholdForm = reactive({ warningThreshold: 5 });
 const showAuthHint = computed(() => /401|403|unauthorized|forbidden|登录|过期/i.test(error.value));
+const filteredRows = computed(() => {
+    const kw = keyword.value.trim().toLowerCase();
+    if (!kw)
+        return rows.value;
+    return rows.value.filter((row) => {
+        return [row.name, row.sku || '', String(row.productId)].some((value) => String(value).toLowerCase().includes(kw));
+    });
+});
 function buildErrorMessage(errorLike, fallback) {
     const status = errorLike?.response?.status;
     const apiMessage = errorLike?.response?.data?.message;
@@ -172,7 +181,18 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)(
 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
     ...{ class: "count-pill" },
 });
+(__VLS_ctx.filteredRows.length);
 (__VLS_ctx.rows.length);
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "search-row" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
+    ...{ class: "search-input" },
+    type: "search",
+    placeholder: "搜索商品名 / SKU / 商品ID",
+    'aria-label': "搜索库存商品",
+});
+(__VLS_ctx.keyword);
 if (__VLS_ctx.loading) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "empty" },
@@ -183,7 +203,7 @@ else if (__VLS_ctx.rows.length === 0 && !__VLS_ctx.error) {
         ...{ class: "empty" },
     });
 }
-else if (__VLS_ctx.rows.length > 0) {
+else if (__VLS_ctx.filteredRows.length > 0) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "table" },
     });
@@ -200,7 +220,7 @@ else if (__VLS_ctx.rows.length > 0) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "right" },
     });
-    for (const [row] of __VLS_getVForSourceType((__VLS_ctx.rows))) {
+    for (const [row] of __VLS_getVForSourceType((__VLS_ctx.filteredRows))) {
         __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
             ...{ class: "trow" },
             key: (row.productId),
@@ -237,7 +257,7 @@ else if (__VLS_ctx.rows.length > 0) {
                         return;
                     if (!!(__VLS_ctx.rows.length === 0 && !__VLS_ctx.error))
                         return;
-                    if (!(__VLS_ctx.rows.length > 0))
+                    if (!(__VLS_ctx.filteredRows.length > 0))
                         return;
                     __VLS_ctx.openInbound(row);
                 } },
@@ -249,13 +269,18 @@ else if (__VLS_ctx.rows.length > 0) {
                         return;
                     if (!!(__VLS_ctx.rows.length === 0 && !__VLS_ctx.error))
                         return;
-                    if (!(__VLS_ctx.rows.length > 0))
+                    if (!(__VLS_ctx.filteredRows.length > 0))
                         return;
                     __VLS_ctx.openThreshold(row);
                 } },
             ...{ class: "secondary-btn" },
         });
     }
+}
+else if (__VLS_ctx.rows.length > 0 && !__VLS_ctx.error) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "empty" },
+    });
 }
 if (__VLS_ctx.error) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -401,6 +426,8 @@ var __VLS_2;
 /** @type {__VLS_StyleScopedClasses['section-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['section-subtitle']} */ ;
 /** @type {__VLS_StyleScopedClasses['count-pill']} */ ;
+/** @type {__VLS_StyleScopedClasses['search-row']} */ ;
+/** @type {__VLS_StyleScopedClasses['search-input']} */ ;
 /** @type {__VLS_StyleScopedClasses['empty']} */ ;
 /** @type {__VLS_StyleScopedClasses['empty']} */ ;
 /** @type {__VLS_StyleScopedClasses['table']} */ ;
@@ -418,6 +445,7 @@ var __VLS_2;
 /** @type {__VLS_StyleScopedClasses['actions']} */ ;
 /** @type {__VLS_StyleScopedClasses['secondary-btn']} */ ;
 /** @type {__VLS_StyleScopedClasses['secondary-btn']} */ ;
+/** @type {__VLS_StyleScopedClasses['empty']} */ ;
 /** @type {__VLS_StyleScopedClasses['error-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['error-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['error-text']} */ ;
@@ -458,12 +486,14 @@ const __VLS_self = (await import('vue')).defineComponent({
             submitting: submitting,
             error: error,
             message: message,
+            keyword: keyword,
             rows: rows,
             activeInbound: activeInbound,
             activeThreshold: activeThreshold,
             inboundForm: inboundForm,
             thresholdForm: thresholdForm,
             showAuthHint: showAuthHint,
+            filteredRows: filteredRows,
             reload: reload,
             openInbound: openInbound,
             closeInbound: closeInbound,

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <AppLayout>
     <div class="home-shell">
       <HomeCategorySidebar />
@@ -37,13 +37,13 @@
             class="featured-product page-lite"
             @click="goProductDetail(item.id)"
           >
-            <img v-if="hasDisplayImage(item.imageUrl)" class="product-image" :src="item.imageUrl" :alt="item.name" loading="lazy" />
-            <div v-else class="product-thumb">{{ normalizeBuyerCategory(item.category) }}</div>
+            <img v-if="hasDisplayImage(item.imageUrl)" class="product-image product-cover-media" :src="item.imageUrl" :alt="item.name" loading="lazy" />
+            <div v-else class="product-thumb product-cover-media">{{ normalizeBuyerCategory(item.category) }}</div>
             <h3 class="product-title">{{ item.name }}</h3>
             <p class="product-desc">{{ item.description }}</p>
             <div class="product-meta">
               <span>￥{{ formatPrice(item.price) }}</span>
-              <span>库存 {{ item.onlineStock }}</span>
+              <span>销量 {{ item.sales ?? 0 }}</span>
             </div>
             <div class="product-actions">
               <button @click.stop="addToCart(item)">加入购物车</button>
@@ -360,6 +360,13 @@ function addToCart(item: Product) {
   background: #fcfffc;
 }
 
+.product-cover-media {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  border-radius: 14px;
+}
+
 .product-thumb {
   display: inline-flex;
   align-items: center;
@@ -371,9 +378,14 @@ function addToCart(item: Product) {
   font-weight: 700;
 }
 
+.product-thumb.product-cover-media {
+  min-height: 0;
+  padding: 12px;
+  text-align: center;
+}
+
 .product-image {
   width: 100%;
-  min-height: 90px;
   border-radius: 14px;
   object-fit: cover;
   display: block;
