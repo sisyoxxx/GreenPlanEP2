@@ -9,18 +9,18 @@
           <RouterLink to="/inventory/profile" class="nav-item" active-class="nav-active">个人信息</RouterLink>
           <div class="nav-divider"></div>
           <RouterLink to="/inventory/dashboard" class="nav-item" active-class="nav-active">工作台</RouterLink>
-          <RouterLink to="/inventory/procurement" class="nav-item" active-class="nav-active">采购计划</RouterLink>
           <RouterLink to="/inventory/orders" class="nav-item" active-class="nav-active">订单管理</RouterLink>
           <RouterLink to="/inventory/items" class="nav-item" active-class="nav-active">商品库存</RouterLink>
           <RouterLink to="/inventory/inbound" class="nav-item" active-class="nav-active">入库</RouterLink>
           <RouterLink to="/inventory/warnings" class="nav-item" active-class="nav-active">库存预警</RouterLink>
           <RouterLink to="/inventory/movements" class="nav-item" active-class="nav-active">库存流水</RouterLink>
+          <RouterLink to="/inventory/procurement" class="nav-item" active-class="nav-active">采购计划</RouterLink>
         </nav>
       </aside>
 
       <main class="inventory-main">
         <header class="page-lite inventory-header">
-          <div>
+          <div v-if="title">
             <p class="hero-tag">{{ subtitleText }}</p>
             <h1 class="inventory-title">{{ title }}</h1>
           </div>
@@ -41,7 +41,7 @@ import { useRoute } from 'vue-router'
 import AppLayout from '../../../layouts/AppLayout.vue'
 
 const props = defineProps<{
-  title: string
+  title?: string
   subtitle?: string
 }>()
 

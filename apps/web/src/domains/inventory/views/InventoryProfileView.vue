@@ -1,5 +1,5 @@
 ﻿<template>
-  <InventoryLayout title="个人信息" subtitle="设置账户基础资料">
+  <InventoryLayout>
     <section class="page-lite profile-card">
       <div class="head">
         <div>

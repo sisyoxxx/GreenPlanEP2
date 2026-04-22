@@ -2,6 +2,7 @@ package com.greenplan.api.reporting;
 
 import com.greenplan.api.catalog.Product;
 import com.greenplan.api.catalog.ProductRepository;
+import com.greenplan.api.orders.Order;
 import com.greenplan.api.orders.OrderItemRepository;
 import com.greenplan.api.orders.OrderRepository;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,8 @@ public class ReportingService {
         Map<Long, Integer> salesByProductId = buildSalesByProductId();
         List<Map<String, Object>> productSalesRows = buildProductSalesRows(products, salesByProductId);
 
-        int totalOrders = (int) orderRepository.count();
+        List<Order> orders = orderRepository.findAllByOrderByIdDesc();
+        int totalOrders = orders.size();
         int totalUnits = salesByProductId.values().stream().mapToInt(Integer::intValue).sum();
         BigDecimal grossSales = BigDecimal.ZERO;
         for (Product product : products) {
@@ -50,9 +52,16 @@ public class ReportingService {
         }
         grossSales = grossSales.setScale(2, RoundingMode.HALF_UP);
 
+        BigDecimal actualOrderTotal = BigDecimal.ZERO;
+        for (Order order : orders) {
+            BigDecimal amount = order.getTotalAmount();
+            if (amount != null) {
+                actualOrderTotal = actualOrderTotal.add(amount);
+            }
+        }
         BigDecimal avgOrder = totalOrders == 0
                 ? BigDecimal.ZERO
-                : grossSales.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP);
+                : actualOrderTotal.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP);
 
         String topCategory = calculateTopCategory(products, salesByProductId);
         List<Map<String, Object>> top10 = productSalesRows.stream()
