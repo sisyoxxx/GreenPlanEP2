@@ -7,8 +7,6 @@ export const http = axios.create({
     timeout: 10000
 });
 http.interceptors.request.use((config) => {
-    // Skip ngrok browser warning page (free tier) during demo deployments
-    config.headers['ngrok-skip-browser-warning'] = '1';
     const store = useAuthStore();
     if (store.accessToken) {
         config.headers.Authorization = `Bearer ${store.accessToken}`;

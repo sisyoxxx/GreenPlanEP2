@@ -4,7 +4,7 @@ server:
 # CORS origins (comma-separated). Default is safe localhost-only.
 # Override at runtime for demo: CORS_ALLOWED_ORIGINS=http://localhost:*,https://your-app.vercel.app
 cors:
-  allowed-origins: "http://localhost:*,http://127.0.0.1:*,http://[::1]:*,https://pardon-ploy-tasting.ngrok-free.dev"
+  allowed-origins: "http://localhost:*,http://127.0.0.1:*,http://[::1]:*"
 
 spring:
   datasource:
