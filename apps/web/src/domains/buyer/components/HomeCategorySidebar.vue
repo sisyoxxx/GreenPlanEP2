@@ -14,7 +14,6 @@
           <span class="sidebar-icon" aria-hidden="true">{{ item.icon }}</span>
           <div class="sidebar-grid-text">
             <div class="sidebar-item-title">{{ item.label }}</div>
-            <div class="sidebar-item-desc">{{ item.desc }}</div>
           </div>
         </button>
       </div>

@@ -38,6 +38,9 @@ public class User {
     @Column(name = "avatar_data_url", columnDefinition = "MEDIUMTEXT")
     private String avatarDataUrl;
 
+    @Column(name = "refresh_token", length = 64)
+    private String refreshToken;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 

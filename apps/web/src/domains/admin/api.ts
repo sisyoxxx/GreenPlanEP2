@@ -306,6 +306,19 @@ export async function deleteTutorial(id: number) {
   return http.delete(`/api/admin/tutorials/${id}`)
 }
 
+export async function swapTutorialOrder(id: number, direction: 'UP' | 'DOWN') {
+  return http.post(`/api/admin/tutorials/${id}/swap-order`, { direction })
+}
+
+export async function fetchAdminReviews() {
+  const res = await http.get('/api/admin/reviews') as { data: AdminOrderReviewItem[] }
+  return res.data
+}
+
+export async function deleteAdminReview(id: number) {
+  return http.delete(`/api/admin/reviews/${id}`)
+}
+
 export async function fetchAdminOrders() {
   const res = await http.get('/api/admin/orders') as { data: AdminOrderListItem[] }
   return res.data

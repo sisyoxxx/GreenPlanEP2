@@ -1,19 +1,17 @@
 package com.greenplan.api.orders;
 
-import com.greenplan.api.auth.RoleCode;
 import com.greenplan.api.auth.User;
 import com.greenplan.api.auth.UserRepository;
+import com.greenplan.api.common.AuthorizationAssert;
+import com.greenplan.api.common.OrderStatus;
+import com.greenplan.api.common.ShippingStatus;
 import com.greenplan.api.security.JwtUserPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 public class InventoryOrderService {
@@ -21,19 +19,22 @@ public class InventoryOrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
+    private final OrderMapper orderMapper;
 
     public InventoryOrderService(
             OrderRepository orderRepository,
             OrderItemRepository orderItemRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            OrderMapper orderMapper
     ) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.userRepository = userRepository;
+        this.orderMapper = orderMapper;
     }
 
     public List<InventoryOrderDto> listAll(JwtUserPrincipal principal) {
-        requireInventoryManager(principal);
+        AuthorizationAssert.requireInventoryManager(principal);
 
         List<Order> orders = orderRepository.findAllByOrderByIdDesc();
         if (orders.isEmpty()) {
@@ -41,8 +42,8 @@ public class InventoryOrderService {
         }
 
         List<Long> orderIds = orders.stream().map(Order::getId).toList();
-        Map<Long, List<OrderItemDto>> itemMap = buildItemMap(orderIds);
-        Map<Long, String> buyerNameMap = buildBuyerNameMap(orders);
+        Map<Long, List<OrderItemDto>> itemMap = orderMapper.buildItemMap(orderIds);
+        Map<Long, String> buyerNameMap = orderMapper.buildBuyerNameMap(orders);
 
         return orders.stream()
                 .map(order -> toDto(order, buyerNameMap.get(order.getBuyerId()), itemMap.getOrDefault(order.getId(), List.of())))
@@ -51,24 +52,26 @@ public class InventoryOrderService {
 
     @Transactional
     public InventoryOrderDto ship(Long orderId, ShipOrderRequest request, JwtUserPrincipal principal) {
-        requireInventoryManager(principal);
+        AuthorizationAssert.requireInventoryManager(principal);
         String trackingNo = request == null ? null : request.trackingNo();
         Order saved = shipOrder(orderId, trackingNo);
         String buyerUsername = userRepository.findById(saved.getBuyerId()).map(User::getUsername).orElse(null);
-        return toDto(saved, buyerUsername, listItems(saved.getId()));
+        return toDto(saved, buyerUsername, orderMapper.listItems(saved.getId()));
     }
 
     @Transactional
     public List<InventoryOrderDto> batchShip(BatchShipOrderRequest request, JwtUserPrincipal principal) {
-        requireInventoryManager(principal);
+        AuthorizationAssert.requireInventoryManager(principal);
 
-        List<Order> shippedOrders = new ArrayList<>();
-        for (Long orderId : request.orderIds()) {
-            shippedOrders.add(shipOrder(orderId, null));
+        List<Order> shippedOrders = orderRepository.findAllById(request.orderIds());
+        for (Order order : shippedOrders) {
+            performShip(order, null);
         }
+        orderRepository.saveAll(shippedOrders);
 
-        Map<Long, String> buyerNameMap = buildBuyerNameMap(shippedOrders);
-        Map<Long, List<OrderItemDto>> itemMap = buildItemMap(shippedOrders.stream().map(Order::getId).toList());
+        List<Long> orderIds = shippedOrders.stream().map(Order::getId).toList();
+        Map<Long, String> buyerNameMap = orderMapper.buildBuyerNameMap(shippedOrders);
+        Map<Long, List<OrderItemDto>> itemMap = orderMapper.buildItemMap(orderIds);
 
         return shippedOrders.stream()
                 .map(order -> toDto(order, buyerNameMap.get(order.getBuyerId()), itemMap.getOrDefault(order.getId(), List.of())))
@@ -77,99 +80,66 @@ public class InventoryOrderService {
 
     @Transactional
     public InventoryOrderDto updateLogistics(Long orderId, UpdateLogisticsRequest request, JwtUserPrincipal principal) {
-        requireInventoryManager(principal);
+        AuthorizationAssert.requireInventoryManager(principal);
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("订单不存在"));
 
-        String shippingStatus = request.shippingStatus();
+        ShippingStatus shippingStatus = parseShippingStatus(request.shippingStatus());
         order.setShippingStatus(shippingStatus);
-        if ("DELIVERED".equalsIgnoreCase(shippingStatus)) {
-            order.setStatus("DELIVERED");
-        } else if ("IN_TRANSIT".equalsIgnoreCase(shippingStatus) && "PAID".equalsIgnoreCase(order.getStatus())) {
-            order.setStatus("SHIPPED");
+
+        if (shippingStatus == ShippingStatus.DELIVERED) {
+            order.setStatus(OrderStatus.DELIVERED);
+        } else if (shippingStatus == ShippingStatus.IN_TRANSIT && order.getStatus() == OrderStatus.PAID) {
+            order.setStatus(OrderStatus.SHIPPED);
         }
 
         Order saved = orderRepository.save(order);
         String buyerUsername = userRepository.findById(saved.getBuyerId()).map(User::getUsername).orElse(null);
-        return toDto(saved, buyerUsername, listItems(saved.getId()));
+        return toDto(saved, buyerUsername, orderMapper.listItems(saved.getId()));
     }
 
     private Order shipOrder(Long orderId, String trackingNo) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("订单不存在"));
-        if (!"PAID".equalsIgnoreCase(order.getStatus())) {
+        performShip(order, trackingNo);
+        return orderRepository.save(order);
+    }
+
+    private void performShip(Order order, String trackingNo) {
+        if (order.getStatus() != OrderStatus.PAID) {
             throw new IllegalArgumentException("当前订单状态不允许发货: " + order.getStatus());
         }
 
         order.setShippingCarrier(null);
         order.setTrackingNo(trackingNo);
-        order.setShippingStatus("IN_TRANSIT");
+        order.setShippingStatus(ShippingStatus.IN_TRANSIT);
         order.setShippedAt(LocalDateTime.now());
-        order.setStatus("SHIPPED");
-
-        return orderRepository.save(order);
+        order.setStatus(OrderStatus.SHIPPED);
     }
 
-    private void requireInventoryManager(JwtUserPrincipal principal) {
-        if (principal.getRole() != RoleCode.INVENTORY_MANAGER) {
-            throw new IllegalArgumentException("仅库存管理员可操作");
+    private ShippingStatus parseShippingStatus(String value) {
+        if (value == null) {
+            return null;
         }
-    }
-
-    private List<OrderItemDto> listItems(Long orderId) {
-        return orderItemRepository.findByOrderIdIn(List.of(orderId)).stream()
-                .map(item -> new OrderItemDto(
-                        item.getProductId(),
-                        item.getProductNameSnapshot(),
-                        item.getPriceSnapshot(),
-                        item.getQuantity(),
-                        item.getLineTotal()
-                ))
-                .toList();
-    }
-
-    private Map<Long, List<OrderItemDto>> buildItemMap(List<Long> orderIds) {
-        Map<Long, List<OrderItemDto>> itemMap = new HashMap<>();
-        for (OrderItem item : orderItemRepository.findByOrderIdIn(orderIds)) {
-            itemMap.computeIfAbsent(item.getOrderId(), key -> new ArrayList<>())
-                    .add(new OrderItemDto(
-                            item.getProductId(),
-                            item.getProductNameSnapshot(),
-                            item.getPriceSnapshot(),
-                            item.getQuantity(),
-                            item.getLineTotal()
-                    ));
+        try {
+            return ShippingStatus.valueOf(value.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("无效的物流状态: " + value);
         }
-        return itemMap;
-    }
-
-    private Map<Long, String> buildBuyerNameMap(List<Order> orders) {
-        Set<Long> buyerIds = new HashSet<>();
-        for (Order order : orders) {
-            if (order.getBuyerId() != null) {
-                buyerIds.add(order.getBuyerId());
-            }
-        }
-
-        Map<Long, String> buyerNameMap = new HashMap<>();
-        for (User user : userRepository.findAllById(buyerIds)) {
-            buyerNameMap.put(user.getId(), user.getUsername());
-        }
-        return buyerNameMap;
     }
 
     private InventoryOrderDto toDto(Order order, String buyerUsername, List<OrderItemDto> items) {
         return new InventoryOrderDto(
                 order.getId(),
                 order.getOrderNo(),
-                order.getStatus(),
+                order.getStatus().name(),
                 order.getTotalAmount(),
                 order.getBuyerId(),
                 buyerUsername,
                 order.getShippingCarrier(),
                 order.getTrackingNo(),
-                order.getShippingStatus(),
+                order.getShippingStatus() == null ? null : order.getShippingStatus().name(),
                 order.getShippedAt(),
                 order.getCreatedAt(),
                 items

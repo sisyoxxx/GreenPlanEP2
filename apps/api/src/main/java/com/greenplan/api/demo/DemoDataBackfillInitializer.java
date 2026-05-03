@@ -265,11 +265,11 @@ public class DemoDataBackfillInitializer {
             Order order = new Order();
             order.setOrderNo("GP" + (202604100001L + index));
             order.setBuyerId(buyerId);
-            order.setStatus(index < 5 ? "PAID" : "PENDING");
+            order.setStatus(index < 5 ? com.greenplan.api.common.OrderStatus.PAID : com.greenplan.api.common.OrderStatus.PAID);
             order.setTotalAmount(totalAmount);
             order.setShippingCarrier(index < 4 ? "顺丰速运" : null);
             order.setTrackingNo(index < 4 ? "SF20260417" + (100 + index) : null);
-            order.setShippingStatus(index < 4 ? "SHIPPED" : "PENDING");
+            order.setShippingStatus(index < 4 ? com.greenplan.api.common.ShippingStatus.IN_TRANSIT : com.greenplan.api.common.ShippingStatus.PENDING);
             order.setShippedAt(index < 4 ? baseTime.plusDays(index).plusHours(6) : null);
 
             Order savedOrder = orderRepository.save(order);

@@ -14,7 +14,7 @@ const routes = [
   { path: '/forgot-password', component: () => import('../domains/buyer/views/ForgotPasswordView.vue') },
   { path: '/tutorial', component: () => import('../domains/buyer/views/TutorialView.vue') },
   { path: '/tutorial/:id', component: () => import('../domains/buyer/views/TutorialDetailView.vue') },
-  { path: '/planting-records', component: () => import('../domains/buyer/views/PlantingRecordsView.vue') },
+  { path: '/planting-records', component: () => import('../domains/buyer/views/PlantingRecordsView.vue'), meta: { requiresAuth: true, permission: 'BUYER_ONLY' as Permission } },
   { path: '/community', component: () => import('../domains/buyer/views/CommunityView.vue') },
   { path: '/community/posts/:id', component: () => import('../domains/buyer/views/CommunityPostDetailView.vue') },
 
@@ -25,9 +25,12 @@ const routes = [
   { path: '/admin/products', component: () => import('../domains/admin/views/AdminProductsView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
   { path: '/admin/tutorials', component: () => import('../domains/admin/views/AdminTutorialsView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
   { path: '/admin/reports/sales', component: () => import('../domains/admin/views/AdminReportsView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
-  { path: '/admin/reviews', component: () => import('../domains/admin/views/AdminReviewsView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
+  { path: '/admin/audit/reviews', component: () => import('../domains/admin/views/AdminReviewsView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
+  { path: '/admin/audit/posts', component: () => import('../domains/admin/views/AdminPostAuditsView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
+  { path: '/admin/audit/reports', component: () => import('../domains/admin/views/AdminReportAuditsView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
   { path: '/admin/promotions', component: () => import('../domains/admin/views/AdminPromotionsView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
   { path: '/admin/promotion-posts', component: () => import('../domains/admin/views/AdminPromotionPostsView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
+  { path: '/admin/community', component: () => import('../domains/admin/views/AdminCommunityView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
   { path: '/admin/profile', component: () => import('../domains/admin/views/AdminProfileView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
 
   { path: '/inventory/dashboard', component: () => import('../domains/inventory/views/InventoryDashboardView.vue'), meta: { requiresAuth: true, permission: 'INVENTORY_ONLY' as Permission } },

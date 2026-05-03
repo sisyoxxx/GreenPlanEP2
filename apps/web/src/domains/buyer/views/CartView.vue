@@ -36,53 +36,19 @@
         </div>
 
         <div v-else class="cart-list">
-          <article v-for="item in filteredItems" :key="item.id" class="cart-item-card" :class="{ multi: multiMode }">
-            <label v-if="multiMode" class="select-box">
-              <input :checked="selectedIds.has(item.id)" type="checkbox" @change="toggleSelected(item.id)" />
-            </label>
-
-            <div class="cart-item-cover" @click="goDetail(item.id)">
-              <img v-if="hasDisplayImage(item.imageUrl)" :src="item.imageUrl" :alt="item.name" loading="lazy" />
-              <span v-else>{{ item.name }}</span>
-            </div>
-
-            <div class="cart-item-info">
-              <div class="cart-item-top">
-                <div>
-                  <span class="cart-item-tag">{{ normalizeCategory(item.category) }}</span>
-                  <h3 class="cart-item-title" @click="goDetail(item.id)">{{ item.name }}</h3>
-                </div>
-                <strong class="cart-item-price">￥{{ formatPrice(item.price) }}</strong>
-              </div>
-
-              <p class="cart-item-desc">{{ item.description }}</p>
-
-              <div class="cart-item-meta">
-                <span>播种：{{ item.plantingMonth || '未设置' }}</span>
-                <span>地区：{{ item.suitableRegion || '未设置' }}</span>
-                <span>库存：{{ item.onlineStock }}</span>
-              </div>
-
-              <div class="cart-item-actions">
-                <div class="qty-stepper">
-                  <button type="button" class="step-btn" @click="cartStore.decrease(item.id)">-</button>
-                  <input
-                    :value="item.quantity"
-                    type="number"
-                    min="1"
-                    :max="Math.max(1, item.onlineStock)"
-                    @input="updateQuantity(item.id, $event)"
-                  />
-                  <button type="button" class="step-btn" @click="cartStore.increase(item.id)">+</button>
-                </div>
-
-                <div class="cart-item-side-actions">
-                  <span class="line-total">小计：￥{{ formatPrice(item.price * item.quantity) }}</span>
-                  <button type="button" class="text-btn" @click="cartStore.removeItem(item.id)">移除</button>
-                </div>
-              </div>
-            </div>
-          </article>
+          <CartItemRow
+            v-for="item in filteredItems"
+            :key="item.id"
+            :item="item"
+            :selected="selectedIds.has(item.id)"
+            :is-multi-mode="multiMode"
+            @toggle-select="toggleSelected"
+            @decrease="cartStore.decrease"
+            @increase="cartStore.increase"
+            @update-quantity="cartStore.setQuantity"
+            @remove="cartStore.removeItem"
+            @go-detail="goDetail"
+          />
         </div>
 
         <section class="cart-bottom page-lite">
@@ -127,18 +93,16 @@
         <p v-if="message" class="cart-message">{{ message }}</p>
       </aside>
 
-      <div v-if="multiMode" class="multi-bar">
-        <div class="multi-bar-left">
-          <strong>已选 {{ selectedItems.length }} 种 · {{ selectedCount }} 件</strong>
-          <span>合计：￥{{ formatPrice(selectedAmount) }}</span>
-        </div>
-        <div class="multi-bar-actions">
-          <button class="danger-btn" @click="removeSelected" :disabled="selectedIds.size === 0">删除</button>
-          <button @click="submitSelectedOrder" :disabled="submitting || selectedIds.size === 0">
-            {{ submitting ? '下单中...' : '购买' }}
-          </button>
-        </div>
-      </div>
+      <CartCheckoutBar
+        :selected-count="selectedCount"
+        :selected-total="selectedAmount"
+        :is-multi-mode="multiMode"
+        :selected-kind-count="selectedItems.length"
+        :submitting="submitting"
+        :has-selection="selectedIds.size > 0"
+        @checkout="submitSelectedOrder"
+        @remove-selected="removeSelected"
+      />
     </div>
   </AppLayout>
 </template>
@@ -147,9 +111,12 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../../../layouts/AppLayout.vue'
+import CartItemRow from '../components/cart/CartItemRow.vue'
+import CartCheckoutBar from '../components/cart/CartCheckoutBar.vue'
 import { normalizeBuyerCategory } from '../categoryConfig'
 import { useBuyerCartStore } from '../stores/useBuyerCartStore'
 import { createOrder } from '../api'
+import { formatPrice } from '../../../utils/format'
 
 const router = useRouter()
 const cartStore = useBuyerCartStore()
@@ -248,22 +215,8 @@ function removeSelected() {
   message.value = '已删除选中的商品。'
 }
 
-function updateQuantity(productId: number, event: Event) {
-  const target = event.target as HTMLInputElement
-  cartStore.setQuantity(productId, Number(target.value) || 1)
-}
-
 function normalizeCategory(category: string | null | undefined) {
   return normalizeBuyerCategory(category)
-}
-
-function hasDisplayImage(url: string | null | undefined) {
-  if (!url) return false
-  return /^https?:\/\//i.test(url)
-}
-
-function formatPrice(value: number) {
-  return Number(value).toFixed(2)
 }
 
 function goProducts() {
@@ -354,163 +307,6 @@ h3 {
   gap: 14px;
 }
 
-.cart-item-card {
-  display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  gap: 16px;
-  padding: 14px;
-  border-radius: 16px;
-  border: 1px solid #e5efe7;
-  background: #fbfefb;
-}
-
-.cart-item-card.multi {
-  grid-template-columns: 24px 180px minmax(0, 1fr);
-}
-
-.select-box {
-  display: flex;
-  align-items: start;
-  justify-content: center;
-  padding-top: 6px;
-}
-
-.cart-item-cover {
-  min-height: 180px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #dff4e4, #f3fbf4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #1f7a41;
-  font-weight: 700;
-  text-align: center;
-  padding: 16px;
-  cursor: pointer;
-}
-
-.cart-item-cover img {
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-  border-radius: 12px;
-  display: block;
-}
-
-.cart-item-cover span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-}
-
-.cart-item-info {
-  display: grid;
-  gap: 10px;
-}
-
-.cart-item-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: start;
-}
-
-.cart-item-tag {
-  display: inline-flex;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #edf9ef;
-  color: #1f7a41;
-  font-size: 12px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.cart-item-title {
-  cursor: pointer;
-  color: #1f2937;
-}
-
-.cart-item-price {
-  color: #1f7a41;
-  font-size: 20px;
-}
-
-.cart-item-desc {
-  margin: 0;
-  color: #6b7280;
-  line-height: 1.7;
-}
-
-.cart-item-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  color: #5f6d66;
-  font-size: 12px;
-}
-
-.cart-item-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.qty-stepper {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid #dfe8e1;
-  border-radius: 999px;
-  overflow: hidden;
-  background: #fff;
-}
-
-.qty-stepper input {
-  width: 64px;
-  border: none;
-  text-align: center;
-  background: transparent;
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-.qty-stepper input::-webkit-outer-spin-button,
-.qty-stepper input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.step-btn {
-  border: none;
-  background: #f4f8f4;
-  color: #1f7a41;
-  width: 36px;
-  height: 36px;
-  font-size: 18px;
-}
-
-.cart-item-side-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.line-total {
-  color: #1f2937;
-  font-weight: 700;
-}
-
-.text-btn {
-  border: none;
-  background: transparent;
-  color: #dc2626;
-  padding: 0;
-}
-
 .cart-bottom {
   display: grid;
   gap: 12px;
@@ -598,47 +394,6 @@ h3 {
   color: #be123c;
 }
 
-.multi-bar {
-  position: fixed;
-  left: 50%;
-  bottom: 16px;
-  transform: translateX(-50%);
-  width: min(980px, calc(100% - 24px));
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(31, 122, 65, 0.22);
-  box-shadow: 0 18px 40px rgba(31, 122, 65, 0.14);
-  backdrop-filter: blur(10px);
-  z-index: 30;
-}
-
-.multi-bar-left {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.multi-bar-left strong {
-  color: #16351f;
-}
-
-.multi-bar-left span {
-  color: #1f7a41;
-  font-weight: 800;
-}
-
-.multi-bar-actions {
-  display: inline-flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
 @media (max-width: 1100px) {
   .cart-page {
     grid-template-columns: 1fr;
@@ -652,23 +407,9 @@ h3 {
 @media (max-width: 760px) {
   .cart-toolbar,
   .cart-header,
-  .cart-item-top,
   .bottom-head {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .cart-item-card {
-    grid-template-columns: 1fr;
-  }
-
-  .cart-item-card.multi {
-    grid-template-columns: 1fr;
-  }
-
-  .select-box {
-    justify-content: flex-start;
-    padding-top: 0;
   }
 
   .bottom-grid {

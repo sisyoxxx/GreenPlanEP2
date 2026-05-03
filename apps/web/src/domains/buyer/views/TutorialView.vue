@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <AppLayout>
     <div class="tutorial-shell">
       <aside class="tutorial-sidebar page-lite">
@@ -17,7 +17,7 @@
       <main class="tutorial-main">
         <div class="hero-row">
           <div class="hero-main">
-            <div class="search-bar page-lite">
+            <div class="search-bar">
               <input v-model="searchKeyword" type="text" placeholder="搜索教程标题或关键词..." class="search-input" />
             </div>
 
@@ -101,54 +101,17 @@
     </div>
 
     <FloatingBall icon="🤖" color="#80ab64" :popup-width="380" :popup-height="500">
-      <div class="chat-window">
-        <div class="chat-header">
-          <span class="chat-title">智能助手</span>
-        </div>
-        <div ref="chatBodyRef" class="chat-body">
-          <div v-if="chatMessages.length === 0" class="chat-welcome">
-            <div class="chat-bot-avatar">🤖</div>
-            <p>你好，我是种植智能助手。你可以在这里提问，我会给出简洁可执行的建议。</p>
-          </div>
-
-          <div v-else class="chat-thread">
-            <div v-for="msg in chatMessages" :key="msg.id" class="chat-row" :class="msg.role">
-              <div class="chat-bubble" :class="msg.role">
-                {{ msg.content }}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="chat-footer">
-          <div class="chat-tools">
-            <button class="chat-tool-btn" title="上传图片">📷</button>
-            <button class="chat-tool-btn" title="语音输入">🎙</button>
-            <button class="chat-tool-btn" title="历史记录">🕘</button>
-          </div>
-          <div class="chat-input-row">
-            <input
-              v-model.trim="chatInput"
-              type="text"
-              class="chat-input"
-              placeholder="输入你的问题..."
-              :disabled="chatSending"
-              @keydown.enter.prevent="sendChat"
-            />
-            <button class="chat-send-btn" :disabled="chatSending || !chatInput" @click="sendChat">
-              {{ chatSending ? '发送中...' : '发送' }}
-            </button>
-          </div>
-        </div>
-      </div>
+      <TutorialAiChat :messages="chatMessages" :loading="chatSending" @send="sendChat" @clear="clearChat" />
     </FloatingBall>
   </AppLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../../../layouts/AppLayout.vue'
 import FloatingBall from '../../../shared/components/FloatingBall.vue'
+import TutorialAiChat from '../components/tutorial/TutorialAiChat.vue'
 import { aiChat, fetchTutorials, type AiChatMessage, type TutorialItem } from '../api'
 import { useBuyerFavoritesStore } from '../stores/useBuyerFavoritesStore'
 
@@ -176,10 +139,8 @@ const router = useRouter()
 type ChatRole = 'user' | 'assistant'
 type ChatMsg = { id: number; role: ChatRole; content: string }
 
-const chatInput = ref('')
 const chatSending = ref(false)
 const chatMessages = ref<ChatMsg[]>([])
-const chatBodyRef = ref<HTMLElement | null>(null)
 
 function formatDuration(durationMinutes: number | null) {
   return durationMinutes ? `${durationMinutes} 分钟` : '图文教程'
@@ -253,16 +214,11 @@ onMounted(() => {
   loadTutorials()
 })
 
-async function sendChat() {
-  const question = chatInput.value.trim()
-  if (!question || chatSending.value) return
+async function sendChat(text: string) {
+  if (!text || chatSending.value) return
 
   const idBase = Date.now()
-  chatMessages.value.push({ id: idBase, role: 'user', content: question })
-  chatInput.value = ''
-  await nextTick()
-  scrollChatToBottom()
-
+  chatMessages.value.push({ id: idBase, role: 'user', content: text })
   chatSending.value = true
   try {
     const payload: AiChatMessage[] = [
@@ -279,15 +235,11 @@ async function sendChat() {
     chatMessages.value.push({ id: idBase + 1, role: 'assistant', content: `提示：${msg}` })
   } finally {
     chatSending.value = false
-    await nextTick()
-    scrollChatToBottom()
   }
 }
 
-function scrollChatToBottom() {
-  const el = chatBodyRef.value
-  if (!el) return
-  el.scrollTop = el.scrollHeight
+function clearChat() {
+  chatMessages.value = []
 }
 </script>
 
@@ -474,6 +426,10 @@ function scrollChatToBottom() {
 
 .search-bar {
   display: flex;
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #e6f0e8;
 }
 
 .search-input {
@@ -578,142 +534,6 @@ function scrollChatToBottom() {
 
 .empty-state { text-align: center; padding: 40px 16px; }
 .empty-hint { color: #9ca3af; margin: 0; }
-
-.chat-window { display: flex; flex-direction: column; height: 100%; }
-
-.chat-header {
-  padding: 14px 16px;
-  background: #80ab64;
-  color: #fff;
-  font-weight: 600;
-  font-size: 15px;
-  flex-shrink: 0;
-}
-
-.chat-body {
-  flex: 1;
-  padding: 16px;
-  overflow-y: auto;
-  background: #f8fcf8;
-}
-
-.chat-welcome {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.chat-bot-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #e6f4ea;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.chat-welcome p {
-  margin: 0;
-  background: #fff;
-  padding: 10px 14px;
-  border-radius: 0 12px 12px 12px;
-  font-size: 14px;
-  color: #374151;
-  line-height: 1.6;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.chat-thread {
-  display: grid;
-  gap: 10px;
-}
-
-.chat-row {
-  display: flex;
-}
-
-.chat-row.user {
-  justify-content: flex-end;
-}
-
-.chat-row.assistant {
-  justify-content: flex-start;
-}
-
-.chat-bubble {
-  max-width: 78%;
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.6;
-  word-break: break-word;
-}
-
-.chat-bubble.assistant {
-  background: #fff;
-  color: #374151;
-  border-radius: 0 12px 12px 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.chat-bubble.user {
-  background: #1f7a41;
-  color: #fff;
-  border-radius: 12px 0 12px 12px;
-  box-shadow: 0 6px 16px rgba(31, 122, 65, 0.12);
-}
-
-.chat-footer {
-  padding: 10px 12px;
-  border-top: 1px solid #f0f0f0;
-  display: grid;
-  gap: 8px;
-  flex-shrink: 0;
-  background: #fff;
-}
-
-.chat-tools { display: flex; gap: 6px; }
-
-.chat-tool-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.chat-tool-btn:hover { background: #e6f4ea; }
-
-.chat-input-row { display: flex; gap: 8px; }
-
-.chat-input {
-  flex: 1;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #d3d7de;
-  font-size: 13px;
-}
-
-.chat-send-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: none;
-  background: #1f7a41;
-  color: #fff;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.chat-send-btn:hover { background: #276749; }
 
 @media (max-width: 1100px) {
   .tutorial-shell {

@@ -65,36 +65,7 @@
         </div>
       </section>
 
-      <section class="reviews-shell">
-        <div class="page-lite review-summary-card">
-          <div>
-            <h2>买家评价</h2>
-            <p class="muted">以下内容全部来自数据库中的真实评价记录。</p>
-          </div>
-          <div class="summary-score">
-            <strong>{{ averageRatingText }}</strong>
-            <span>{{ reviews.length }} 条评价</span>
-          </div>
-        </div>
-
-        <div v-if="reviews.length === 0" class="page-lite state-card">
-          <h3>还没有评价</h3>
-          <p class="muted">当前商品还没有买家留下评价，完成购买后即可在订单页提交。</p>
-        </div>
-
-        <div v-else class="review-list">
-          <article v-for="review in reviews" :key="review.id" class="page-lite review-card">
-            <div class="review-head">
-              <div>
-                <strong>{{ review.buyerUsername }}</strong>
-                <span class="review-time">{{ formatDateTime(review.createdAt) }}</span>
-              </div>
-              <span class="review-stars">{{ renderStars(review.rating) }}</span>
-            </div>
-            <p class="review-content">{{ review.content }}</p>
-          </article>
-        </div>
-      </section>
+      <ProductReviewList :reviews="reviews" />
     </template>
 
     <div v-else class="page-lite state-card">
@@ -105,38 +76,15 @@
       </div>
     </div>
 
-    <div v-if="showPayDialog && product" class="pay-dialog-mask" @click.self="closePayDialog">
-      <div class="pay-dialog page-lite">
-        <div class="pay-dialog-head">
-          <div>
-            <h3>支付确认</h3>
-            <p>这里仅做流程演示，不会接入真实支付。</p>
-          </div>
-          <button class="close-btn" @click="closePayDialog">×</button>
-        </div>
-
-        <div class="pay-dialog-body">
-          <div class="pay-line">
-            <span>商品</span>
-            <strong>{{ product.name }}</strong>
-          </div>
-          <div class="pay-line">
-            <span>数量</span>
-            <strong>{{ payQuantity }}</strong>
-          </div>
-          <div class="pay-line">
-            <span>应付金额</span>
-            <strong class="pay-amount">￥{{ formatPrice(product.price * payQuantity) }}</strong>
-          </div>
-          <div class="pay-note">点击“确认支付”后将直接生成订单并跳转到订单页。</div>
-        </div>
-
-        <div class="pay-dialog-actions">
-          <button class="secondary-btn" @click="closePayDialog">取消</button>
-          <button @click="confirmPay" :disabled="submitting">{{ submitting ? '处理中...' : '确认支付' }}</button>
-        </div>
-      </div>
-    </div>
+    <ProductPayDialog
+      :show="showPayDialog"
+      :product="product"
+      :quantity="quantity"
+      :max-purchase="maxPurchase"
+      :submitting="submitting"
+      @close="closePayDialog"
+      @confirm="confirmPay"
+    />
   </AppLayout>
 </template>
 
@@ -148,6 +96,9 @@ import AppLayout from '../../../layouts/AppLayout.vue'
 import { normalizeBuyerCategory } from '../categoryConfig'
 import { useBuyerCartStore } from '../stores/useBuyerCartStore'
 import { createOrder, fetchProduct, fetchProductReviews, type Product, type ProductReview } from '../api'
+import { formatDateTime, formatPrice, renderStars, hasDisplayImage } from '../../../utils/format'
+import ProductReviewList from '../components/product/ProductReviewList.vue'
+import ProductPayDialog from '../components/product/ProductPayDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -180,11 +131,6 @@ const averageRatingText = computed(() => (averageRating.value > 0 ? averageRatin
 const averageStars = computed(() => renderStars(Math.round(averageRating.value || 0)))
 const displayCategory = computed(() => normalizeBuyerCategory(product.value?.category))
 const productThumbText = computed(() => product.value?.name || '商品')
-
-function hasDisplayImage(url: string | null | undefined) {
-  if (!url) return false
-  return /^https?:\/\//i.test(url)
-}
 
 onMounted(async () => {
   const id = Number(route.params.id)
@@ -255,23 +201,9 @@ function addToCart() {
   message.value = `${product.value.name} 已加入购物车。`
 }
 
-function renderStars(rating: number) {
-  const safe = Math.max(0, Math.min(5, rating))
-  return `${'★'.repeat(safe)}${'☆'.repeat(5 - safe)}`
-}
-
-function formatPrice(price: number) {
-  return Number(price).toFixed(2)
-}
-
 function formatRate(rate: number | null | undefined) {
   if (rate === null || rate === undefined || Number.isNaN(Number(rate))) return '未设置'
   return `${Number(rate).toFixed(2)}%`
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) return '刚刚'
-  return value.replace('T', ' ').slice(0, 16)
 }
 
 function goProducts() {
@@ -298,7 +230,7 @@ function goCart() {
 
 .product-thumb {
   width: 100%;
-  min-height: 320px;
+  height: 260px;
   border-radius: 20px;
   background: linear-gradient(135deg, #dff4e4, #f3fbf4);
   display: flex;
@@ -312,7 +244,7 @@ function goCart() {
 
 .product-image {
   width: 100%;
-  min-height: 320px;
+  height: 260px;
   border-radius: 20px;
   object-fit: cover;
   display: block;
@@ -358,15 +290,13 @@ h1 {
   flex-wrap: wrap;
 }
 
-.rating-stars,
-.review-stars {
+.rating-stars {
   color: #f59e0b;
   font-size: 16px;
   letter-spacing: 0.08em;
 }
 
 .rating-meta,
-.review-time,
 .muted {
   color: #6b7280;
   line-height: 1.7;
@@ -379,8 +309,7 @@ h1 {
   color: #1f2937;
 }
 
-.hero-subtitle,
-.review-content {
+.hero-subtitle {
   margin: 0;
   color: #4b5563;
   line-height: 1.8;
@@ -434,162 +363,15 @@ h1 {
   color: #1f2937;
 }
 
-.reviews-shell {
-  display: grid;
-  gap: 14px;
-  margin-top: 14px;
-}
-
-.review-summary-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  gap: 16px;
-}
-
-.review-summary-card h2 {
-  margin: 0;
-  color: #16351f;
-}
-
-.summary-score {
-  display: grid;
-  gap: 4px;
-  justify-items: end;
-  text-align: right;
-}
-
-.summary-score strong {
-  font-size: 30px;
-  color: #1f7a41;
-}
-
-.summary-score span {
-  color: #6b7280;
-  font-size: 13px;
-}
-
-.review-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.review-card {
-  display: grid;
-  gap: 10px;
-}
-
-.review-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: start;
-}
-
-.review-head strong {
-  display: block;
-  color: #1f2937;
-}
-
 .state-card {
   display: grid;
   gap: 10px;
   padding: 18px;
 }
 
-.pay-dialog-mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.42);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  z-index: 60;
-}
-
-.pay-dialog {
-  width: min(440px, 100%);
-  display: grid;
-  gap: 16px;
-}
-
-.pay-dialog-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: start;
-}
-
-.pay-dialog-head h3 {
-  margin: 0;
-  color: #16351f;
-}
-
-.pay-dialog-head p {
-  margin: 6px 0 0;
-  color: #6b7280;
-  font-size: 13px;
-}
-
-.close-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: #f4f7f4;
-  color: #374151;
-  font-size: 20px;
-  line-height: 1;
-}
-
-.pay-dialog-body {
-  display: grid;
-  gap: 10px;
-}
-
-.pay-line {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: #4b5563;
-}
-
-.pay-amount {
-  color: #1f7a41;
-  font-size: 20px;
-}
-
-.pay-note {
-  padding: 12px;
-  border-radius: 12px;
-  background: #f8fcf8;
-  color: #6b7280;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.pay-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
 @media (max-width: 900px) {
-  .product-detail-shell,
-  .review-list {
+  .product-detail-shell {
     grid-template-columns: 1fr;
-  }
-
-  .review-summary-card {
-    flex-direction: column;
-  }
-
-  .summary-score {
-    justify-items: start;
-    text-align: left;
   }
 }
 </style>

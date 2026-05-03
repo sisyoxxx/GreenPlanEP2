@@ -70,11 +70,20 @@ let hideTimer: ReturnType<typeof setTimeout> | null = null
 const navItems = [
   { path: '/admin/profile', icon: '👤', label: '个人信息' },
   { path: '/admin/dashboard', icon: '📊', label: '工作台' },
+  { path: '/admin/reports/sales', icon: '📈', label: '销量分析' },
   { path: '/admin/orders', icon: '🧾', label: '订单管理' },
   { path: '/admin/products', icon: '🪴', label: '商品管理' },
   { path: '/admin/tutorials', icon: '📚', label: '教程管理' },
-  { path: '/admin/reports/sales', icon: '📈', label: '销量分析' },
-  { path: '/admin/reviews', icon: '⭐', label: '用户评价' },
+  {
+    path: '/admin/audit',
+    icon: '🔍',
+    label: '审核',
+    submenu: [
+      { path: '/admin/audit/reviews', label: '评价审核' },
+      { path: '/admin/audit/posts', label: '帖子审核' },
+      { path: '/admin/audit/reports', label: '举报审核' }
+    ]
+  },
   { path: '/admin/announcements', icon: '📣', label: '公告管理' },
   {
     path: '/admin/promotions',
@@ -85,7 +94,8 @@ const navItems = [
       { path: '/admin/promotions?type=product', label: '商品页轮播' }
     ]
   },
-  { path: '/admin/promotion-posts', icon: '📰', label: '推广文章' }
+  { path: '/admin/promotion-posts', icon: '📰', label: '推广文章' },
+  { path: '/admin/community', icon: '💬', label: '社区管理' }
 ]
 
 function isActive(path: string) {

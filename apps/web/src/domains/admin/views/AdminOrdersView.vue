@@ -72,6 +72,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AdminLayout from '../../../layouts/AdminLayout.vue'
 import { fetchAdminOrders, type AdminOrderListItem } from '../api'
+import { formatDateTime } from '../../../utils/format'
+import { ORDER_STATUS_MAP, SHIPPING_STATUS_MAP, ORDER_STATUS_CLASS } from '../../../utils/constants'
 
 type TabKey = 'all' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'PENDING'
 
@@ -122,35 +124,15 @@ async function loadOrders() {
 }
 
 function statusLabel(status: string) {
-  const map: Record<string, string> = {
-    PENDING: '待支付',
-    PAID: '待发货',
-    SHIPPED: '运输中',
-    DELIVERED: '已收货'
-  }
-  return map[status] || status
+  return ORDER_STATUS_MAP[status] || status
 }
 
 function shippingLabel(status: string | null) {
-  const map: Record<string, string> = {
-    PENDING: '待处理',
-    IN_TRANSIT: '运输中',
-    DELIVERED: '已送达'
-  }
-  return status ? (map[status] || status) : '未同步'
+  return status ? (SHIPPING_STATUS_MAP[status] || status) : '未同步'
 }
 
 function statusClass(status: string) {
-  if (status === 'PENDING') return 'pending'
-  if (status === 'PAID') return 'paid'
-  if (status === 'SHIPPED') return 'shipped'
-  if (status === 'DELIVERED') return 'delivered'
-  return 'default'
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) return '时间未记录'
-  return value.replace('T', ' ').slice(0, 16)
+  return ORDER_STATUS_CLASS[status] || 'default'
 }
 
 function viewDetail(id: number) {

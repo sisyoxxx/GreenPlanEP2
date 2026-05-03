@@ -1,44 +1,24 @@
 ﻿<template>
   <AppLayout>
     <div class="community-shell">
-      <aside class="community-sidebar page-lite">
-        <button class="post-btn" @click="toggleComposeMode">{{ isComposeMode ? '返回社区' : '+ 发帖' }}</button>
+      <CommunitySidebar
+        :active-tab="activeTab"
+        :is-compose-mode="isComposeMode"
+        :is-topic-dropdown-open="isTopicDropdownOpen"
+        :selected-topic="selectedTopic"
+        :topic-options="topicOptions"
+        :active-inbox="activeInbox"
+        :direct-conversation-count="directConversationCount"
+        :reply-count="replyNotifications.length"
+        :like-count="likeNotifications.length"
+        @toggle-compose-mode="toggleComposeMode"
+        @set-tab="setTab"
+        @toggle-topic-dropdown="toggleTopicDropdown"
+        @select-topic="selectTopic"
+        @open-inbox="openInbox"
+      />
 
-        <div class="topic-nav-wrap">
-          <button class="nav-item topic-nav-trigger" :class="{ active: activeTab === 'all' }" @click="toggleTopicDropdown">
-            话题分类
-            <span class="topic-arrow" :class="{ open: isTopicDropdownOpen }">⌄</span>
-          </button>
-          <div v-if="isTopicDropdownOpen" class="topic-dropdown">
-            <button
-              v-for="topic in topicOptions"
-              :key="topic"
-              class="topic-option"
-              :class="{ active: selectedTopic === topic }"
-              @click="selectTopic(topic)"
-            >
-              {{ topic }}
-            </button>
-          </div>
-        </div>
-
-        <button class="nav-item" :class="{ active: activeTab === 'my' }" @click="setTab('my')">我的帖子</button>
-        <button class="nav-item" :class="{ active: activeTab === 'inbox' }" @click="setTab('inbox')">私信中心</button>
-
-        <div class="sidebar-messages">
-          <button class="message-item" :class="{ active: activeInbox === 'message' && activeTab === 'inbox' }" @click="openInbox('message')">
-            <span>私信消息</span><span class="message-badge">{{ directConversationCount }}</span>
-          </button>
-          <button class="message-item" :class="{ active: activeInbox === 'reply' && activeTab === 'inbox' }" @click="openInbox('reply')">
-            <span>评论回复</span><span class="message-badge">{{ replyNotifications.length }}</span>
-          </button>
-          <button class="message-item" :class="{ active: activeInbox === 'like' && activeTab === 'inbox' }" @click="openInbox('like')">
-            <span>点赞消息</span><span class="message-badge">{{ likeNotifications.length }}</span>
-          </button>
-        </div>
-      </aside>
-
-      <main class="community-main">
+      <main ref="mainRef" class="community-main">
         <section v-if="isComposeMode" class="page-lite compose-panel">
           <h3>发布新帖</h3>
           <p class="muted">{{ isAdmin ? '管理员发布会自动归类为“官方活动”。' : '可选分类：种植经验、求助问答、成果展示。' }}</p>
@@ -65,112 +45,60 @@
             <input v-model.trim="rightKeyword" type="text" placeholder="搜索帖子、作者或消息内容" />
           </div>
 
-          <div v-if="activeTab === 'all'" class="page-lite announcement-bar">
-            <strong>{{ announcementTitle }}</strong>
-            <span>{{ announcementContent }}</span>
-          </div>
+          <CommunityAnnouncementBar ref="announcementBarRef" :announcements="announcements" />
 
-          <section v-if="activeTab === 'inbox'" class="page-lite inbox-panel">
-            <h3>{{ inboxTitle }}</h3>
-            <p class="muted">{{ inboxHint }}</p>
-
-            <template v-if="activeInbox === 'message'">
-              <div v-if="!activeConversation" class="conversation-list">
-                <button
-                  v-for="conversation in filteredConversations"
-                  :key="conversation.id"
-                  class="conversation-item"
-                  @click="openDirectChat(conversation.id)"
-                >
-                  <div class="conversation-main">
-                    <strong>{{ conversation.partner }}</strong>
-                    <p>{{ conversation.preview || '暂无消息内容' }}</p>
-                  </div>
-                  <div class="conversation-meta">
-                    <span>{{ conversation.updatedAt }}</span>
-                    <span v-if="conversation.unread > 0" class="message-badge">{{ conversation.unread }}</span>
-                  </div>
-                </button>
-                <div v-if="filteredConversations.length === 0" class="muted">暂时没有私信消息</div>
-              </div>
-
-              <div v-else class="chat-panel">
-                <div class="chat-head">
-                  <button class="secondary-btn" @click="backToInboxList">返回消息列表</button>
-                  <strong>与 {{ activeConversation.partner }} 的聊天</strong>
-                </div>
-
-                <div class="chat-thread">
-                  <article
-                    v-for="msg in activeConversation.messages"
-                    :key="msg.id"
-                    class="chat-row"
-                    :class="{ mine: msg.sender === 'me' }"
-                  >
-                    <p class="chat-bubble">{{ msg.text }}</p>
-                    <span class="muted">{{ msg.time }}</span>
-                  </article>
-                </div>
-
-                <div class="chat-compose">
-                  <input v-model.trim="chatDraft" type="text" placeholder="输入消息并回车发送" @keydown.enter.prevent="sendDirectMessage" />
-                  <button class="secondary-btn" :disabled="!chatDraft" @click="sendDirectMessage">发送</button>
-                </div>
-              </div>
-            </template>
-
-            <template v-else>
-              <div v-if="activeInboxItems.length === 0" class="muted">暂时没有新消息</div>
-              <article v-for="item in activeInboxItems" :key="item.id" class="inbox-item">
-                <p>{{ item.text }}</p>
-                <span class="muted">{{ item.time }}</span>
-              </article>
-            </template>
-          </section>
+          <CommunityInboxPanel
+            v-if="activeTab === 'inbox'"
+            :active-inbox="activeInbox"
+            :inbox-title="inboxTitle"
+            :inbox-hint="inboxHint"
+            :active-conversation="activeConversation"
+            :filtered-conversations="filteredConversations"
+            :chat-draft="chatDraft"
+            :active-inbox-items="activeInboxItems"
+            @open-direct-chat="openDirectChat"
+            @back-to-inbox-list="backToInboxList"
+            @send-direct-message="sendDirectMessage"
+            @update-chat-draft="chatDraft = $event"
+          />
 
           <div v-if="activeTab === 'my' && filteredPosts.length === 0" class="page-lite muted">暂无内容</div>
 
-          <section v-if="activeTab !== 'inbox' && filteredPosts.length > 0" class="post-list">
-            <article
-              v-for="post in filteredPosts"
-              :key="post.id"
-              class="post-card page-lite"
-              role="button"
-              tabindex="0"
-              @click="openPostDetail(post.id)"
-              @keydown.enter.prevent="openPostDetail(post.id)"
-            >
-              <img v-if="post.imageUrl" class="post-image" :src="post.imageUrl" :alt="post.imageAlt || post.title" />
-              <div class="post-head">
-                <span class="tag">{{ post.topic }}</span>
-                <span class="muted">{{ post.time }}</span>
-              </div>
-              <h3>{{ post.title }}</h3>
-              <p>{{ post.content }}</p>
-              <div class="row">
-                <button class="secondary-btn" @click.stop="like(post.id)">点赞 {{ post.likes }}</button>
-                <button class="secondary-btn" :class="{ active: favoritePostIdSet.has(post.id) }" @click.stop="toggleFavorite(post)">
-                  {{ favoritePostIdSet.has(post.id) ? '已收藏' : '收藏' }}
-                </button>
-                <button class="secondary-btn" @click.stop="prefillReply(post)">评论</button>
-                <button class="secondary-btn" @click.stop="prefillMessage(post)">私信</button>
-              </div>
-            </article>
-          </section>
+          <CommunityPostList
+            v-if="activeTab !== 'inbox'"
+            :posts="filteredPosts"
+            :favorite-post-id-set="favoritePostIdSet"
+            :comment-counts="commentCounts"
+            :show-empty="activeTab === 'my' && filteredPosts.length === 0"
+            empty-text="暂无内容"
+            @open-post-detail="openPostDetail"
+            @like="like"
+            @toggle-favorite="toggleFavorite"
+            @prefill-reply="prefillReply"
+            @prefill-message="prefillMessage"
+          />
         </template>
       </main>
+
+      <aside v-if="selectedPostId !== null" class="community-detail-panel page-lite">
+        <CommunityPostDetailPanel :post-id="selectedPostId" @close="closePostDetail" />
+      </aside>
     </div>
   </AppLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import AppLayout from '../../../layouts/AppLayout.vue'
 import { fetchAnnouncements, type AnnouncementItem } from '../api'
 import { useAuthStore } from '../../../core/auth/useAuthStore'
 import { useBuyerFavoritesStore } from '../stores/useBuyerFavoritesStore'
 import { useBuyerCommunityStore, type CommunityPostItem, type TopicCategory } from '../stores/useBuyerCommunityStore'
+import CommunityPostDetailPanel from '../components/community/CommunityPostDetailPanel.vue'
+import CommunitySidebar from '../components/community/CommunitySidebar.vue'
+import CommunityInboxPanel from '../components/community/CommunityInboxPanel.vue'
+import CommunityAnnouncementBar from '../components/community/CommunityAnnouncementBar.vue'
+import CommunityPostList from '../components/community/CommunityPostList.vue'
 
 type Tab = 'all' | 'my' | 'inbox' | 'compose'
 type InboxType = 'message' | 'reply' | 'like'
@@ -196,11 +124,11 @@ const selectedTopic = ref<TopicCategory | null>(null)
 const isTopicDropdownOpen = ref(false)
 const message = ref('')
 const rightKeyword = ref('')
-const latestAnnouncement = ref<AnnouncementItem | null>(null)
+const announcements = ref<AnnouncementItem[]>([])
 const chatDraft = ref('')
 const activeConversationId = ref<number | null>(null)
-
-const router = useRouter()
+const selectedPostId = ref<number | null>(null)
+const announcementBarRef = ref<{ stopCarousel: () => void } | null>(null)
 const authStore = useAuthStore()
 const favoritesStore = useBuyerFavoritesStore()
 const communityStore = useBuyerCommunityStore()
@@ -233,8 +161,18 @@ const likeNotifications = ref<InboxItem[]>([
   { id: 1, text: '你的帖子《第一次播种成功发芽了》新增 3 个赞。', time: '今天' }
 ])
 
-const announcementTitle = computed(() => latestAnnouncement.value?.title || '本周主题：晒出你的阳台春播进度')
-const announcementContent = computed(() => latestAnnouncement.value?.content || '带图发帖更容易获得互动。')
+const commentCounts = computed(() => {
+  const raw = safeParse<any[]>(localStorage.getItem('gp2_buyer_post_comments'), [])
+  if (!Array.isArray(raw)) return {} as Record<number, number>
+  const counts: Record<number, number> = {}
+  for (const item of raw) {
+    const postId = Number(item?.postId)
+    if (Number.isFinite(postId)) {
+      counts[postId] = (counts[postId] || 0) + 1
+    }
+  }
+  return counts
+})
 
 const filteredPosts = computed(() => {
   let list = [...communityStore.posts]
@@ -264,19 +202,47 @@ const inboxHint = computed(() => {
   return '这里显示点赞动态。'
 })
 
-onMounted(loadAnnouncement)
+onMounted(() => {
+  loadAnnouncements()
+  restoreScroll()
+})
 
-async function loadAnnouncement() {
+onBeforeUnmount(() => {
+  saveScroll()
+  announcementBarRef.value?.stopCarousel()
+})
+
+const SCROLL_KEY = 'gp2_community_scroll_top'
+const mainRef = ref<HTMLElement | null>(null)
+
+function saveScroll() {
+  const el = mainRef.value
+  if (!el) return
+  sessionStorage.setItem(SCROLL_KEY, String(el.scrollTop))
+}
+
+function restoreScroll() {
+  const saved = sessionStorage.getItem(SCROLL_KEY)
+  if (saved === null) return
+  const top = Number(saved)
+  if (!Number.isFinite(top)) return
+  requestAnimationFrame(() => {
+    const el = mainRef.value
+    if (el) el.scrollTop = top
+  })
+}
+
+async function loadAnnouncements() {
   try {
     const list = await fetchAnnouncements()
-    latestAnnouncement.value = list[0] || null
+    announcements.value = list.slice(0, 5)
   } catch {
-    latestAnnouncement.value = null
+    announcements.value = []
   }
 }
 
-function setTab(tab: Tab) {
-  activeTab.value = tab
+function setTab(tab: string) {
+  activeTab.value = tab as Tab
   if (tab !== 'all') isTopicDropdownOpen.value = false
 }
 
@@ -299,8 +265,8 @@ function toggleComposeMode() {
   if (isAdmin.value) draft.topic = '官方活动'
 }
 
-function openInbox(type: InboxType) {
-  activeInbox.value = type
+function openInbox(type: string) {
+  activeInbox.value = type as InboxType
   activeTab.value = 'inbox'
   if (type !== 'message') activeConversationId.value = null
 }
@@ -425,7 +391,11 @@ function prefillMessage(post: CommunityPostItem) {
 }
 
 function openPostDetail(postId: number) {
-  router.push(`/community/posts/${postId}`)
+  selectedPostId.value = postId
+}
+
+function closePostDetail() {
+  selectedPostId.value = null
 }
 
 function readFileAsDataUrl(file: File) {
@@ -561,6 +531,10 @@ function safeParse<T>(value: string | null, fallback: T): T {
   overflow: hidden;
 }
 
+.community-shell:has(.community-detail-panel) {
+  grid-template-columns: 280px minmax(0, 1fr) 400px;
+}
+
 .community-sidebar {
   display: grid;
   gap: 10px;
@@ -575,97 +549,15 @@ function safeParse<T>(value: string | null, fallback: T): T {
   overflow-y: auto;
 }
 
-.topic-nav-wrap,
-.sidebar-messages,
-.compose-panel,
-.announcement-bar,
-.inbox-panel,
-.post-card {
+.compose-panel {
   display: grid;
   gap: 10px;
-}
-
-.post-btn,
-.nav-item,
-.message-item,
-.topic-option {
-  width: 100%;
-}
-
-.topic-nav-trigger {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.topic-arrow.open {
-  transform: rotate(180deg);
-}
-
-.topic-dropdown {
-  display: grid;
-  gap: 6px;
-}
-
-.post-btn {
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid #1f7a41;
-  background: #1f7a41;
-  color: #ffffff;
-  font-weight: 700;
-}
-
-.message-item,
-.nav-item,
-.topic-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid #e2ece3;
-  background: #ffffff;
-  color: #1f2937;
-  font-weight: 600;
-  text-align: left;
-  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
-}
-
-.message-item:hover,
-.nav-item:hover,
-.topic-option:hover {
-  transform: translateY(-1px);
-  border-color: #cfe2d3;
-  box-shadow: 0 6px 14px rgba(31, 122, 65, 0.08);
-}
-
-.message-item.active,
-.nav-item.active,
-.topic-option.active {
-  border-color: #9ad3aa;
-  box-shadow: 0 0 0 1px rgba(31, 122, 65, 0.12);
-  color: #1d5b36;
-  background: #ffffff;
-}
-
-.message-badge {
-  border-radius: 999px;
-  padding: 0 8px;
-  background: #f4f8f4;
-  color: #4b5563;
-}
-
-.message-item.active .message-badge {
-  background: #e8f6eb;
-  color: #1d5b36;
 }
 
 .community-search input,
 .compose-panel input,
 .compose-panel textarea,
-.compose-panel select,
-.chat-compose input {
+.compose-panel select {
   width: 100%;
 }
 
@@ -687,176 +579,7 @@ function safeParse<T>(value: string | null, fallback: T): T {
   border-radius: 12px;
 }
 
-.conversation-list {
-  display: grid;
-  gap: 10px;
-}
 
-.conversation-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #e3ece5;
-  background: #fff;
-  text-align: left;
-}
-
-.conversation-main {
-  min-width: 0;
-}
-
-.conversation-main p {
-  margin: 4px 0 0;
-  color: #6b7280;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.conversation-meta {
-  display: grid;
-  justify-items: end;
-  gap: 6px;
-  color: #9ca3af;
-  font-size: 12px;
-}
-
-.chat-panel {
-  display: grid;
-  gap: 10px;
-}
-
-.chat-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.chat-thread {
-  display: grid;
-  gap: 8px;
-  max-height: 340px;
-  overflow-y: auto;
-  padding: 8px;
-  border-radius: 12px;
-  border: 1px solid #e6eee8;
-  background: #fbfefc;
-}
-
-.chat-row {
-  display: grid;
-  gap: 2px;
-  justify-items: start;
-}
-
-.chat-row.mine {
-  justify-items: end;
-}
-
-.chat-bubble {
-  margin: 0;
-  max-width: min(460px, 90%);
-  border-radius: 10px;
-  padding: 8px 10px;
-  background: #f3f7f4;
-  color: #1f2937;
-}
-
-.chat-row.mine .chat-bubble {
-  background: #e8f6eb;
-  color: #1d5b36;
-}
-
-.chat-compose {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.chat-compose input {
-  flex: 1;
-}
-
-.post-list {
-  column-width: 248px;
-  column-gap: 12px;
-}
-
-.post-card {
-  break-inside: avoid;
-  margin-bottom: 12px;
-  gap: 8px;
-  padding: 0;
-  overflow: hidden;
-  cursor: pointer;
-  transition: transform 0.16s ease, box-shadow 0.16s ease;
-}
-
-.post-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(21, 56, 35, 0.09);
-}
-
-.post-image {
-  width: 100%;
-  height: 152px;
-  object-fit: cover;
-  border-radius: 0;
-}
-
-.post-head,
-.post-card h3,
-.post-card p,
-.post-card .row {
-  padding-left: 12px;
-  padding-right: 12px;
-}
-
-.post-head {
-  padding-top: 10px;
-}
-
-.post-card h3 {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.4;
-}
-
-.post-card p {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.55;
-  color: #4b5563;
-}
-
-.post-card .row {
-  padding-bottom: 10px;
-  gap: 6px;
-}
-
-.post-card .secondary-btn {
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 1.2;
-}
-
-.post-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.tag {
-  font-size: 12px;
-  font-weight: 700;
-  color: #1f7a41;
-}
 
 .muted {
   color: #6b7280;
@@ -886,8 +609,19 @@ function safeParse<T>(value: string | null, fallback: T): T {
   }
 }
 
+@media (max-width: 1100px) {
+  .community-shell:has(.community-detail-panel) {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .community-detail-panel {
+    display: none;
+  }
+}
+
 @media (max-width: 900px) {
-  .community-shell {
+  .community-shell,
+  .community-shell:has(.community-detail-panel) {
     grid-template-columns: 1fr;
     height: auto;
     overflow: visible;

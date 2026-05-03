@@ -26,7 +26,7 @@ public class AuthService {
         User user = new User();
         user.setUsername(request.username());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setRoleCode(request.roleCode() == null ? RoleCode.BUYER : request.roleCode());
+        user.setRoleCode(RoleCode.BUYER);
         User saved = userRepository.save(user);
         return buildAuthResponse(saved);
     }
@@ -44,7 +44,7 @@ public class AuthService {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new IllegalArgumentException("refreshToken不能为空");
         }
-        return userRepository.findByUsername("buyer")
+        return userRepository.findByRefreshToken(refreshToken)
                 .map(this::buildAuthResponse)
                 .orElseThrow(() -> new IllegalArgumentException("无效refreshToken"));
     }
@@ -52,6 +52,8 @@ public class AuthService {
     private AuthResponse buildAuthResponse(User user) {
         String accessToken = jwtTokenProvider.createToken(user.getId(), user.getUsername(), user.getRoleCode().name());
         String refreshToken = UUID.randomUUID().toString();
+        user.setRefreshToken(refreshToken);
+        userRepository.save(user);
         return new AuthResponse(accessToken, refreshToken,
                 new UserProfile(user.getId(), user.getUsername(), user.getRoleCode()));
     }

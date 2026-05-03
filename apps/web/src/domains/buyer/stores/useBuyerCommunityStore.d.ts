@@ -10,6 +10,8 @@ export interface CommunityPostItem {
     author: string;
     imageUrl?: string;
     imageAlt?: string;
+    auditStatus?: 'pending' | 'approved' | 'rejected';
+    auditMessage?: string;
 }
 export declare const useBuyerCommunityStore: import("pinia").StoreDefinition<"buyer-community", {
     posts: CommunityPostItem[];
@@ -27,5 +29,8 @@ export declare const useBuyerCommunityStore: import("pinia").StoreDefinition<"bu
         author: string;
         imageUrl?: string | undefined;
         imageAlt?: string | undefined;
+        auditStatus?: "pending" | "approved" | "rejected" | undefined;
+        auditMessage?: string | undefined;
     } | null;
+    setAuditStatus(postId: number, status: "pending" | "approved" | "rejected", message?: string): void;
 }>;

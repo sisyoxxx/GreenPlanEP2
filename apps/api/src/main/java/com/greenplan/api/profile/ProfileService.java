@@ -2,6 +2,7 @@ package com.greenplan.api.profile;
 
 import com.greenplan.api.auth.User;
 import com.greenplan.api.auth.UserRepository;
+import com.greenplan.api.common.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +31,7 @@ public class ProfileService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        String nextUsername = normalizeBlankToNull(request.username());
+        String nextUsername = StringUtils.normalizeBlankToNull(request.username());
         if (nextUsername != null) {
             if (nextUsername.length() > 64) {
                 throw new IllegalArgumentException("Username must be at most 64 characters");
@@ -42,10 +43,10 @@ public class ProfileService {
             user.setUsername(nextUsername);
         }
 
-        user.setNickname(normalizeBlankToNull(request.nickname()));
-        user.setGender(normalizeBlankToNull(request.gender()));
-        user.setPhone(normalizeBlankToNull(request.phone()));
-        user.setAvatarDataUrl(normalizeBlankToNull(request.avatarDataUrl()));
+        user.setNickname(StringUtils.normalizeBlankToNull(request.nickname()));
+        user.setGender(StringUtils.normalizeBlankToNull(request.gender()));
+        user.setPhone(StringUtils.normalizeBlankToNull(request.phone()));
+        user.setAvatarDataUrl(StringUtils.normalizeBlankToNull(request.avatarDataUrl()));
 
         return toDto(userRepository.save(user));
     }
@@ -141,11 +142,5 @@ public class ProfileService {
                 address.getCreatedAt(),
                 address.getUpdatedAt()
         );
-    }
-
-    private static String normalizeBlankToNull(String value) {
-        if (value == null) return null;
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 }

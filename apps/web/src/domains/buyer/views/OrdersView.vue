@@ -76,88 +76,30 @@
           </section>
 
           <section v-else class="order-list">
-            <article
+            <OrderCard
               v-for="order in sortedOrders"
               :key="order.id"
-              :class="['page-lite order-card', { focused: focusOrderId === order.id }]"
-            >
-              <div class="order-card-head">
-                <div>
-                  <strong>{{ order.orderNo }}</strong>
-                  <p class="muted">{{ formatOrderTime(order) }}</p>
-                </div>
-                <div class="status-stack">
-                  <span :class="['status-badge', `status-${order.status}`]">{{ statusLabel(order.status) }}</span>
-                </div>
-              </div>
-
-              <div class="item-list">
-                <div v-for="item in order.items" :key="`${order.id}-${item.productId}`" class="item-card">
-                  <div class="item-info">
-                    <button class="item-title" @click="goProduct(item.productId)">{{ item.productName }}</button>
-                    <span class="muted">x{{ item.quantity }} · ¥{{ formatPrice(item.lineTotal) }}</span>
-                  </div>
-                  <button
-                    v-if="canReviewItem(order, item.productId)"
-                    class="secondary-btn"
-                    @click="openReview(order, item.productId, item.productName)"
-                  >
-                    去评价
-                  </button>
-                  <span v-else-if="isReviewed(order.id, item.productId)" class="review-done">已评价</span>
-                </div>
-              </div>
-
-              <div class="order-card-foot">
-                <span class="order-total">合计 ¥{{ formatPrice(order.totalAmount) }}</span>
-                <div class="card-actions">
-                  <button
-                    v-if="canConfirmReceive(order)"
-                    class="secondary-btn"
-                    :disabled="confirmingOrderId === order.id"
-                    @click="confirmReceived(order)"
-                  >
-                    {{ confirmingOrderId === order.id ? '处理中...' : '已收货' }}
-                  </button>
-                  <button class="secondary-btn" @click="goProduct(order.items[0]?.productId)">再次购买</button>
-                </div>
-              </div>
-            </article>
+              :order="order"
+              :focused="focusOrderId === order.id"
+              :confirming="confirmingOrderId === order.id"
+              :reviewed-product-ids="reviews.filter((r) => r.orderId === order.id).map((r) => r.productId)"
+              @confirm-receive="confirmReceived(order)"
+              @go-product="goProduct"
+              @open-review="(productId: number, productName: string) => openReview(order, productId, productName)"
+            />
           </section>
         </template>
 
-        <section v-if="reviewDraft" class="page-lite review-editor">
-          <div class="review-editor-head">
-            <div>
-              <h3>提交评价</h3>
-              <p class="muted">{{ reviewDraft.productName }} · 订单 {{ reviewDraft.orderNo }}</p>
-            </div>
-            <button class="secondary-btn" @click="closeReview">关闭</button>
-          </div>
-
-          <label class="field">
-            <span>评分</span>
-            <select v-model.number="reviewForm.rating">
-              <option :value="5">5 星</option>
-              <option :value="4">4 星</option>
-              <option :value="3">3 星</option>
-              <option :value="2">2 星</option>
-              <option :value="1">1 星</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>评价内容</span>
-            <textarea v-model.trim="reviewForm.content" rows="4" placeholder="写下你的真实体验"></textarea>
-          </label>
-
-          <div class="card-actions">
-            <button :disabled="submittingReview" @click="submitReview">
-              {{ submittingReview ? '提交中...' : '提交评价' }}
-            </button>
-            <button class="secondary-btn" @click="closeReview">取消</button>
-          </div>
-        </section>
+        <OrderReviewEditor
+          v-if="reviewDraft"
+          :product-name="reviewDraft.productName"
+          :order-no="reviewDraft.orderNo"
+          v-model:rating="reviewForm.rating"
+          v-model:content="reviewForm.content"
+          :submitting="submittingReview"
+          @submit="submitReview"
+          @cancel="closeReview"
+        />
 
         <p v-if="message" class="message">{{ message }}</p>
         <p v-if="error" class="error">{{ error }}</p>
@@ -170,6 +112,8 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '../../../layouts/AppLayout.vue'
+import OrderCard from '../components/orders/OrderCard.vue'
+import OrderReviewEditor from '../components/orders/OrderReviewEditor.vue'
 import {
   confirmMyOrderReceived,
   createReview,
@@ -178,6 +122,7 @@ import {
   type BuyerOrder,
   type ProductReview
 } from '../api'
+import { formatDateTime, renderStars } from '../../../utils/format'
 
 type OrderTab = 'all' | 'paid' | 'shipped' | 'delivered' | 'toReview' | 'reviews'
 
@@ -278,20 +223,6 @@ async function loadData() {
   }
 }
 
-function statusLabel(status: string) {
-  const map: Record<string, string> = {
-    PENDING: '待支付',
-    PAID: '待发货',
-    SHIPPED: '运输中',
-    DELIVERED: '已收货'
-  }
-  return map[status] || status
-}
-
-function canConfirmReceive(order: BuyerOrder) {
-  return ['PAID', 'SHIPPED'].includes(order.status)
-}
-
 async function confirmReceived(order: BuyerOrder) {
   if (confirmingOrderId.value) return
 
@@ -317,10 +248,6 @@ function reviewableItems(order: BuyerOrder) {
 
 function isReviewed(orderId: number, productId: number) {
   return reviewKeySet.value.has(`${orderId}-${productId}`)
-}
-
-function canReviewItem(order: BuyerOrder, productId: number) {
-  return ['SHIPPED', 'DELIVERED'].includes(order.status) && !isReviewed(order.id, productId)
 }
 
 function openReview(order: BuyerOrder, productId: number, productName: string) {
@@ -373,42 +300,8 @@ function goProduct(productId?: number) {
   if (!productId) return
   router.push(`/products/${productId}`)
 }
-
-function renderStars(rating: number) {
-  const safe = Math.max(0, Math.min(5, rating))
-  return `${'★'.repeat(safe)}${'☆'.repeat(5 - safe)}`
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) return ''
-  return value.replace('T', ' ').slice(0, 16)
-}
-
-function formatOrderTime(order: BuyerOrder) {
-  const text = formatDateTime(order.createdAt)
-  if (text) return text
-
-  const match = order.orderNo?.match(/^GP(\d{13})/)
-  if (match) {
-    const ts = Number(match[1])
-    if (Number.isFinite(ts) && ts > 0) {
-      const date = new Date(ts)
-      const y = date.getFullYear()
-      const m = String(date.getMonth() + 1).padStart(2, '0')
-      const d = String(date.getDate()).padStart(2, '0')
-      const hh = String(date.getHours()).padStart(2, '0')
-      const mm = String(date.getMinutes()).padStart(2, '0')
-      return `${y}-${m}-${d} ${hh}:${mm}`
-    }
-  }
-
-  return '下单时间待同步'
-}
-
-function formatPrice(value: number) {
-  return Number(value).toFixed(2)
-}
 </script>
+
 <style scoped>
 .orders-shell {
   display: grid;
@@ -420,8 +313,7 @@ function formatPrice(value: number) {
 }
 
 .orders-sidebar,
-.toolbar-card,
-.review-editor {
+.toolbar-card {
   display: grid;
   gap: 14px;
 }
@@ -434,8 +326,7 @@ function formatPrice(value: number) {
 }
 
 .sidebar-head h2,
-.toolbar-card h1,
-.review-editor h3 {
+.toolbar-card h1 {
   margin: 0;
   color: #16351f;
 }
@@ -526,12 +417,7 @@ function formatPrice(value: number) {
 }
 
 .toolbar-actions,
-.order-card-head,
-.status-stack,
-.order-card-foot,
-.card-actions,
-.review-head,
-.review-editor-head {
+.review-head {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
@@ -539,81 +425,9 @@ function formatPrice(value: number) {
   justify-content: space-between;
 }
 
-.order-card,
 .review-card {
   display: grid;
   gap: 14px;
-}
-
-.order-card.focused {
-  border: 1px solid #9ad3aa;
-  box-shadow: 0 0 0 1px rgba(31, 122, 65, 0.16);
-}
-
-.status-badge,
-.review-done {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.status-PAID {
-  background: #fff5d6;
-  color: #946200;
-}
-
-.status-SHIPPED {
-  background: #e7eefc;
-  color: #2f5fb8;
-}
-
-.status-DELIVERED {
-  background: #dff5e4;
-  color: #166534;
-}
-
-.review-done {
-  background: #edf9ef;
-  color: #1f7a41;
-}
-
-.item-list {
-  display: grid;
-  gap: 10px;
-}
-
-.item-card {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  padding: 12px;
-  border-radius: 14px;
-  background: #f8fcf8;
-  border: 1px solid #e3eee4;
-}
-
-.item-info {
-  display: grid;
-  gap: 4px;
-}
-
-.item-title {
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: #16351f;
-  font-weight: 700;
-  text-align: left;
-}
-
-.order-total {
-  font-size: 15px;
-  font-weight: 700;
-  color: #16351f;
 }
 
 .review-stars {
@@ -625,17 +439,6 @@ function formatPrice(value: number) {
   margin: 0;
   color: #4b5563;
   line-height: 1.75;
-}
-
-.field {
-  display: grid;
-  gap: 6px;
-}
-
-.field span {
-  color: #4b5563;
-  font-size: 13px;
-  font-weight: 600;
 }
 
 .message {
@@ -654,14 +457,6 @@ function formatPrice(value: number) {
   padding: 28px 16px;
   text-align: center;
   color: #6b7280;
-}
-
-.text-link {
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: #1f7a41;
-  font-weight: 700;
 }
 
 .secondary-btn {
@@ -699,5 +494,3 @@ function formatPrice(value: number) {
   }
 }
 </style>
-
-

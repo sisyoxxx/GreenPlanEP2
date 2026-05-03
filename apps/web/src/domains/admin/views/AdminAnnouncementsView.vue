@@ -5,29 +5,39 @@
         <h2 class="page-title">公告管理</h2>
         <p class="page-desc">已发布公告支持编辑与删除，修改后会同步到前台公告展示。</p>
       </div>
-      <button class="secondary-btn" @click="loadAnnouncements" :disabled="loading">
-        {{ loading ? '刷新中...' : '刷新列表' }}
-      </button>
+      <div class="head-actions">
+        <button class="secondary-btn" @click="loadAnnouncements" :disabled="loading">
+          {{ loading ? '刷新中...' : '刷新列表' }}
+        </button>
+        <button @click="openCreate">发布公告</button>
+      </div>
     </section>
 
-    <section class="page-lite editor-card">
-      <h3>{{ editingId ? '编辑公告' : '发布公告' }}</h3>
-      <input v-model.trim="form.title" placeholder="请输入公告标题" />
-      <textarea v-model.trim="form.content" rows="4" placeholder="请输入公告内容"></textarea>
-      <div class="form-actions">
+    <BaseModal
+      :open="showForm"
+      :title="editingId ? '编辑公告' : '发布公告'"
+      size="lg"
+      @close="cancelEdit"
+    >
+      <div class="modal-form">
+        <input v-model.trim="form.title" placeholder="请输入公告标题" />
+        <textarea v-model.trim="form.content" rows="4" placeholder="请输入公告内容"></textarea>
+        <p v-if="message" class="message">{{ message }}</p>
+      </div>
+      <template #footer>
+        <button class="secondary-btn" @click="cancelEdit" :disabled="submitting">取消</button>
         <button @click="submitAnnouncement" :disabled="submitting">
           {{ submitting ? '提交中...' : editingId ? '保存修改' : '发布公告' }}
         </button>
-        <button class="secondary-btn" @click="resetForm" :disabled="submitting">{{ editingId ? '取消编辑' : '清空' }}</button>
-      </div>
-      <p v-if="message" class="message">{{ message }}</p>
-    </section>
+      </template>
+    </BaseModal>
 
     <section class="page-lite table-card">
       <div class="table-head">
         <h3>公告列表</h3>
         <span class="count-chip">{{ announcements.length }} 条</span>
       </div>
+      <p v-if="message && !showForm" class="message">{{ message }}</p>
 
       <div v-if="loading && announcements.length === 0" class="empty-state">公告加载中...</div>
       <div v-else-if="error" class="empty-state error">{{ error }}</div>
@@ -72,6 +82,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import AdminLayout from '../../../layouts/AdminLayout.vue'
+import BaseModal from '../../../shared/components/BaseModal.vue'
 import {
   createAnnouncement,
   deleteAnnouncement,
@@ -79,6 +90,7 @@ import {
   type AdminAnnouncement,
   updateAnnouncement
 } from '../api'
+import { formatDateTime } from '../../../utils/format'
 
 const announcements = ref<AdminAnnouncement[]>([])
 const loading = ref(false)
@@ -87,6 +99,7 @@ const deletingId = ref<number | null>(null)
 const editingId = ref<number | null>(null)
 const error = ref('')
 const message = ref('')
+const showForm = ref(false)
 
 const form = reactive({
   title: '',
@@ -119,6 +132,7 @@ function startEdit(item: AdminAnnouncement) {
   form.title = item.title
   form.content = item.content
   message.value = ''
+  showForm.value = true
 }
 
 async function submitAnnouncement() {
@@ -143,7 +157,7 @@ async function submitAnnouncement() {
       })
       message.value = '公告已发布'
     }
-    resetForm()
+    cancelEdit()
     await loadAnnouncements()
   } catch (err: any) {
     message.value = err?.response?.data?.message || (editingId.value ? '公告更新失败' : '公告发布失败')
@@ -166,7 +180,7 @@ async function removeAnnouncement(item: AdminAnnouncement) {
   try {
     await deleteAnnouncement(item.id)
     message.value = '公告已删除'
-    if (editingId.value === item.id) resetForm()
+    if (editingId.value === item.id) cancelEdit()
     await loadAnnouncements()
   } catch (err: any) {
     message.value = err?.response?.data?.message || '公告删除失败'
@@ -175,22 +189,42 @@ async function removeAnnouncement(item: AdminAnnouncement) {
   }
 }
 
+function openCreate() {
+  resetForm()
+  showForm.value = true
+}
+
+function cancelEdit() {
+  resetForm()
+  showForm.value = false
+}
+
 function resetForm() {
   editingId.value = null
   form.title = ''
   form.content = ''
+  message.value = ''
 }
 
-function formatDateTime(value: string | null) {
-  if (!value) return '未记录'
-  return value.replace('T', ' ').slice(0, 16)
-}
+
+
 </script>
 
 <style scoped>
 .page-head,
 .editor-card,
 .table-card {
+  display: grid;
+  gap: 14px;
+}
+
+.head-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modal-form {
   display: grid;
   gap: 14px;
 }

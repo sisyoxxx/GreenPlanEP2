@@ -3,6 +3,7 @@ package com.greenplan.api.inventory;
 import com.greenplan.api.auth.RoleCode;
 import com.greenplan.api.catalog.Product;
 import com.greenplan.api.catalog.ProductRepository;
+import com.greenplan.api.common.AuthorizationAssert;
 import com.greenplan.api.security.JwtUserPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,8 @@ import java.util.Map;
 
 @Service
 public class InventoryService {
+
+    private static final int DEFAULT_WARNING_THRESHOLD = 5;
 
     private final InventoryItemRepository inventoryItemRepository;
     private final InventoryInboundEntryRepository inboundEntryRepository;
@@ -56,7 +59,7 @@ public class InventoryService {
                             p.getSku(),
                             p.getName(),
                             item == null ? 0 : item.getOnlineStock(),
-                            item == null ? 5 : item.getWarningThreshold()
+                            item == null ? DEFAULT_WARNING_THRESHOLD : item.getWarningThreshold()
                     );
                 })
                 .toList();
@@ -70,9 +73,7 @@ public class InventoryService {
 
     @Transactional
     public void updateWarningThreshold(WarningThresholdRequest request, JwtUserPrincipal principal) {
-        if (principal.getRole() != RoleCode.INVENTORY_MANAGER) {
-            throw new IllegalArgumentException("无权限设置库存预警阈值");
-        }
+        AuthorizationAssert.requireRole(principal, RoleCode.INVENTORY_MANAGER, "无权限设置库存预警阈值");
         if (request.warningThreshold() < 0) {
             throw new IllegalArgumentException("预警阈值不能为负数");
         }
@@ -85,9 +86,7 @@ public class InventoryService {
 
     @Transactional
     public void inbound(InventoryInboundRequest request, JwtUserPrincipal principal) {
-        if (principal.getRole() != RoleCode.INVENTORY_MANAGER) {
-            throw new IllegalArgumentException("无权限入库");
-        }
+        AuthorizationAssert.requireRole(principal, RoleCode.INVENTORY_MANAGER, "无权限入库");
         if (request.quantity() <= 0) {
             throw new IllegalArgumentException("入库数量必须大于 0");
         }
@@ -122,7 +121,7 @@ public class InventoryService {
         InventoryItem item = new InventoryItem();
         item.setProduct(product);
         item.setOnlineStock(0);
-        item.setWarningThreshold(5);
+        item.setWarningThreshold(DEFAULT_WARNING_THRESHOLD);
         return inventoryItemRepository.save(item);
     }
 }

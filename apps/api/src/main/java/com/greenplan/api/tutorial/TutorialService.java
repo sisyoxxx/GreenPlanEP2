@@ -69,6 +69,35 @@ public class TutorialService {
         tutorialRepository.deleteById(id);
     }
 
+    @Transactional
+    public void swapDisplayOrder(Long id, String direction) {
+        Tutorial current = tutorialRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Tutorial not found"));
+
+        String area = current.getDisplayArea();
+        Integer currentOrder = current.getDisplayOrder();
+
+        Tutorial target = switch (direction.toUpperCase()) {
+            case "UP" -> tutorialRepository
+                    .findFirstByDisplayAreaAndDisplayOrderLessThanOrderByDisplayOrderDesc(area, currentOrder)
+                    .orElse(null);
+            case "DOWN" -> tutorialRepository
+                    .findFirstByDisplayAreaAndDisplayOrderGreaterThanOrderByDisplayOrderAsc(area, currentOrder)
+                    .orElse(null);
+            default -> throw new IllegalArgumentException("Direction must be UP or DOWN");
+        };
+
+        if (target == null) {
+            throw new IllegalArgumentException("无法移动，已在区域最" + (direction.equalsIgnoreCase("UP") ? "顶部" : "底部"));
+        }
+
+        Integer targetOrder = target.getDisplayOrder();
+        target.setDisplayOrder(currentOrder);
+        current.setDisplayOrder(targetOrder);
+        tutorialRepository.save(target);
+        tutorialRepository.save(current);
+    }
+
     private TutorialItemDto toDto(Tutorial tutorial) {
         return new TutorialItemDto(
                 tutorial.getId(),

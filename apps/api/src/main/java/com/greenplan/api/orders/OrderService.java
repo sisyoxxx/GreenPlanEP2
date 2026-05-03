@@ -5,7 +5,9 @@ import com.greenplan.api.auth.User;
 import com.greenplan.api.auth.UserRepository;
 import com.greenplan.api.catalog.Product;
 import com.greenplan.api.catalog.ProductRepository;
-import com.greenplan.api.inventory.InventoryItem;
+import com.greenplan.api.common.AuthorizationAssert;
+import com.greenplan.api.common.OrderStatus;
+import com.greenplan.api.common.ShippingStatus;
 import com.greenplan.api.inventory.InventoryItemRepository;
 import com.greenplan.api.inventory.InventoryMovement;
 import com.greenplan.api.inventory.InventoryMovementRepository;
@@ -19,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +34,7 @@ public class OrderService {
     private final InventoryMovementRepository movementRepository;
     private final UserRepository userRepository;
     private final ProductReviewRepository reviewRepository;
+    private final OrderMapper orderMapper;
 
     public OrderService(
             OrderRepository orderRepository,
@@ -41,7 +43,8 @@ public class OrderService {
             InventoryItemRepository inventoryItemRepository,
             InventoryMovementRepository movementRepository,
             UserRepository userRepository,
-            ProductReviewRepository reviewRepository
+            ProductReviewRepository reviewRepository,
+            OrderMapper orderMapper
     ) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
@@ -50,13 +53,12 @@ public class OrderService {
         this.movementRepository = movementRepository;
         this.userRepository = userRepository;
         this.reviewRepository = reviewRepository;
+        this.orderMapper = orderMapper;
     }
 
     @Transactional
     public OrderDetailDto create(CreateOrderRequest request, JwtUserPrincipal principal) {
-        if (principal.getRole() != RoleCode.BUYER) {
-            throw new IllegalArgumentException("Only buyers can place orders");
-        }
+        AuthorizationAssert.requireBuyer(principal);
 
         List<OrderItem> itemsToSave = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
@@ -64,15 +66,11 @@ public class OrderService {
         for (CreateOrderItemRequest itemReq : request.items()) {
             Product product = productRepository.findById(itemReq.productId())
                     .orElseThrow(() -> new IllegalArgumentException("Product not found: " + itemReq.productId()));
-            InventoryItem inventory = inventoryItemRepository.findByProductId(itemReq.productId())
-                    .orElseThrow(() -> new IllegalArgumentException("Inventory record not found: " + itemReq.productId()));
 
-            if (inventory.getOnlineStock() < itemReq.quantity()) {
+            int deducted = inventoryItemRepository.deductStock(itemReq.productId(), itemReq.quantity());
+            if (deducted == 0) {
                 throw new IllegalArgumentException("Insufficient inventory: " + product.getName());
             }
-
-            inventory.setOnlineStock(inventory.getOnlineStock() - itemReq.quantity());
-            inventoryItemRepository.save(inventory);
 
             BigDecimal lineTotal = product.getPrice().multiply(BigDecimal.valueOf(itemReq.quantity()));
             total = total.add(lineTotal);
@@ -89,9 +87,9 @@ public class OrderService {
         Order order = new Order();
         order.setOrderNo("GP" + System.currentTimeMillis());
         order.setBuyerId(principal.getId());
-        order.setStatus("PAID");
+        order.setStatus(OrderStatus.PAID);
         order.setTotalAmount(total);
-        order.setShippingStatus("PENDING");
+        order.setShippingStatus(ShippingStatus.PENDING);
         order.setCreatedAt(LocalDateTime.now());
         Order savedOrder = orderRepository.save(order);
 
@@ -99,7 +97,7 @@ public class OrderService {
         for (OrderItem orderItem : itemsToSave) {
             orderItem.setOrderId(savedOrder.getId());
             OrderItem saved = orderItemRepository.save(orderItem);
-            responseItems.add(toItemDto(saved));
+            responseItems.add(orderMapper.toItemDto(saved));
 
             InventoryMovement movement = new InventoryMovement();
             movement.setProductId(saved.getProductId());
@@ -112,7 +110,7 @@ public class OrderService {
             movementRepository.save(movement);
         }
 
-        return toDto(savedOrder, responseItems);
+        return orderMapper.toDetailDto(savedOrder, responseItems);
     }
 
     public List<OrderDetailDto> listMine(JwtUserPrincipal principal) {
@@ -122,53 +120,53 @@ public class OrderService {
         }
 
         List<Long> ids = orders.stream().map(Order::getId).toList();
-        Map<Long, List<OrderItemDto>> itemMap = buildItemMap(ids);
+        Map<Long, List<OrderItemDto>> itemMap = orderMapper.buildItemMap(ids);
 
         return orders.stream()
-                .map(order -> toDto(order, itemMap.getOrDefault(order.getId(), List.of())))
+                .map(order -> orderMapper.toDetailDto(order, itemMap.getOrDefault(order.getId(), List.of())))
                 .toList();
     }
 
     @Transactional
     public OrderDetailDto confirmReceived(Long orderId, JwtUserPrincipal principal) {
-        if (principal.getRole() != RoleCode.BUYER) {
-            throw new IllegalArgumentException("Only buyers can confirm receipt");
-        }
+        AuthorizationAssert.requireBuyer(principal);
 
         Order order = orderRepository.findByIdAndBuyerId(orderId, principal.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Order not found or no permission"));
 
-        if (!"DELIVERED".equalsIgnoreCase(order.getStatus())) {
-            order.setStatus("DELIVERED");
-            order.setShippingStatus("DELIVERED");
-            if (order.getShippedAt() == null) {
-                order.setShippedAt(LocalDateTime.now());
-            }
-            order = orderRepository.save(order);
+        if (order.getStatus() != OrderStatus.SHIPPED) {
+            throw new IllegalArgumentException("Only shipped orders can be confirmed");
         }
 
-        return toDto(order, listItems(order.getId()));
+        order.setStatus(OrderStatus.DELIVERED);
+        order.setShippingStatus(ShippingStatus.DELIVERED);
+        if (order.getShippedAt() == null) {
+            order.setShippedAt(LocalDateTime.now());
+        }
+        order = orderRepository.save(order);
+
+        return orderMapper.toDetailDto(order, orderMapper.listItems(order.getId()));
     }
 
     public List<AdminOrderListDto> listAllForAdmin(JwtUserPrincipal principal) {
-        requireAdmin(principal);
+        AuthorizationAssert.requireAdmin(principal);
 
         List<Order> orders = orderRepository.findAllByOrderByIdDesc();
         if (orders.isEmpty()) {
             return List.of();
         }
 
-        Map<Long, String> buyerNameMap = buildBuyerNameMap(orders);
+        Map<Long, String> buyerNameMap = orderMapper.buildBuyerNameMap(orders);
 
         return orders.stream()
                 .map(order -> new AdminOrderListDto(
                         order.getId(),
                         order.getOrderNo(),
-                        order.getStatus(),
+                        order.getStatus().name(),
                         order.getTotalAmount(),
                         order.getBuyerId(),
                         buyerNameMap.get(order.getBuyerId()),
-                        order.getShippingStatus(),
+                        order.getShippingStatus() == null ? null : order.getShippingStatus().name(),
                         order.getCreatedAt(),
                         order.getShippedAt()
                 ))
@@ -176,7 +174,7 @@ public class OrderService {
     }
 
     public AdminOrderDetailDto getDetailForAdmin(Long orderId, JwtUserPrincipal principal) {
-        requireAdmin(principal);
+        AuthorizationAssert.requireAdmin(principal);
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found"));
@@ -185,7 +183,7 @@ public class OrderService {
                 .map(User::getUsername)
                 .orElse("Unknown");
 
-        List<OrderItemDto> items = listItems(order.getId());
+        List<OrderItemDto> items = orderMapper.listItems(order.getId());
         List<ProductReviewDto> reviews = reviewRepository.findByOrderIdIn(List.of(order.getId())).stream()
                 .map(this::toReviewDto)
                 .toList();
@@ -193,60 +191,16 @@ public class OrderService {
         return new AdminOrderDetailDto(
                 order.getId(),
                 order.getOrderNo(),
-                order.getStatus(),
+                order.getStatus().name(),
                 order.getTotalAmount(),
                 order.getBuyerId(),
                 buyerUsername,
-                order.getShippingStatus(),
+                order.getShippingStatus() == null ? null : order.getShippingStatus().name(),
                 order.getCreatedAt(),
                 order.getShippedAt(),
                 items,
                 reviews
         );
-    }
-
-    private void requireAdmin(JwtUserPrincipal principal) {
-        if (principal.getRole() != RoleCode.ADMIN) {
-            throw new IllegalArgumentException("Only admin can access this endpoint");
-        }
-    }
-
-    private List<OrderItemDto> listItems(Long orderId) {
-        return orderItemRepository.findByOrderIdIn(List.of(orderId)).stream()
-                .map(this::toItemDto)
-                .toList();
-    }
-
-    private OrderItemDto toItemDto(OrderItem item) {
-        return new OrderItemDto(
-                item.getProductId(),
-                item.getProductNameSnapshot(),
-                item.getPriceSnapshot(),
-                item.getQuantity(),
-                item.getLineTotal()
-        );
-    }
-
-    private Map<Long, List<OrderItemDto>> buildItemMap(List<Long> orderIds) {
-        Map<Long, List<OrderItemDto>> itemMap = new HashMap<>();
-        for (OrderItem item : orderItemRepository.findByOrderIdIn(orderIds)) {
-            itemMap.computeIfAbsent(item.getOrderId(), key -> new ArrayList<>()).add(toItemDto(item));
-        }
-        return itemMap;
-    }
-
-    private Map<Long, String> buildBuyerNameMap(List<Order> orders) {
-        List<Long> buyerIds = orders.stream()
-                .map(Order::getBuyerId)
-                .filter(id -> id != null)
-                .distinct()
-                .toList();
-
-        Map<Long, String> buyerNameMap = new HashMap<>();
-        for (User user : userRepository.findAllById(buyerIds)) {
-            buyerNameMap.put(user.getId(), user.getUsername());
-        }
-        return buyerNameMap;
     }
 
     private ProductReviewDto toReviewDto(ProductReview review) {
@@ -260,21 +214,6 @@ public class OrderService {
                 review.getRating(),
                 review.getContent(),
                 review.getCreatedAt()
-        );
-    }
-
-    private OrderDetailDto toDto(Order order, List<OrderItemDto> items) {
-        return new OrderDetailDto(
-                order.getId(),
-                order.getOrderNo(),
-                order.getStatus(),
-                order.getTotalAmount(),
-                order.getShippingCarrier(),
-                order.getTrackingNo(),
-                order.getShippingStatus(),
-                order.getShippedAt(),
-                order.getCreatedAt(),
-                items
         );
     }
 }

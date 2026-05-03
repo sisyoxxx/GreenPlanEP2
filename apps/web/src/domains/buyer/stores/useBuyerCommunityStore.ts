@@ -15,6 +15,8 @@ export interface CommunityPostItem {
   author: string
   imageUrl?: string
   imageAlt?: string
+  auditStatus?: 'pending' | 'approved' | 'rejected'
+  auditMessage?: string
 }
 
 function seedPosts(): CommunityPostItem[] {
@@ -132,7 +134,9 @@ function normalizePost(raw: any): CommunityPostItem | null {
     mine: Boolean(raw?.mine),
     author: String(raw?.author || ''),
     imageUrl: raw?.imageUrl ? String(raw.imageUrl) : undefined,
-    imageAlt: raw?.imageAlt ? String(raw.imageAlt) : undefined
+    imageAlt: raw?.imageAlt ? String(raw.imageAlt) : undefined,
+    auditStatus: ['pending', 'approved', 'rejected'].includes(raw?.auditStatus) ? raw.auditStatus : undefined,
+    auditMessage: raw?.auditMessage ? String(raw.auditMessage) : undefined
   }
 }
 
@@ -168,6 +172,15 @@ export const useBuyerCommunityStore = defineStore('buyer-community', {
       const safeId = Number(postId)
       if (!Number.isFinite(safeId)) return null
       return this.posts.find((post) => post.id === safeId) || null
+    },
+    setAuditStatus(postId: number, status: 'pending' | 'approved' | 'rejected', message?: string) {
+      const safeId = Number(postId)
+      if (!Number.isFinite(safeId)) return
+      const target = this.posts.find((post) => post.id === safeId)
+      if (!target) return
+      target.auditStatus = status
+      if (message !== undefined) target.auditMessage = message
+      persist(this.posts)
     }
   }
 })

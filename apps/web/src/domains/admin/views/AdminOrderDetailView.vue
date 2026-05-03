@@ -108,6 +108,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '../../../layouts/AdminLayout.vue'
 import { fetchAdminOrderDetail, type AdminOrderDetail } from '../api'
+import { formatDateTime, renderStars } from '../../../utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -176,15 +177,8 @@ function statusClass(status: string) {
   return 'default'
 }
 
-function formatDateTime(value: string | null) {
-  if (!value) return '时间未记录'
-  return value.replace('T', ' ').slice(0, 16)
-}
 
-function renderStars(rating: number) {
-  const safe = Math.max(0, Math.min(5, rating))
-  return `${'★'.repeat(safe)}${'☆'.repeat(5 - safe)}`
-}
+
 </script>
 
 <style scoped>

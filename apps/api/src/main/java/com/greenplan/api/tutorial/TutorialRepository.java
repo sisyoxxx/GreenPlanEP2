@@ -10,4 +10,8 @@ public interface TutorialRepository extends JpaRepository<Tutorial, Long> {
     Optional<Tutorial> findByIdAndPublishedTrue(Long id);
 
     List<Tutorial> findAllByOrderByDisplayAreaAscDisplayOrderAscIdAsc();
+
+    Optional<Tutorial> findFirstByDisplayAreaAndDisplayOrderLessThanOrderByDisplayOrderDesc(String displayArea, Integer displayOrder);
+
+    Optional<Tutorial> findFirstByDisplayAreaAndDisplayOrderGreaterThanOrderByDisplayOrderAsc(String displayArea, Integer displayOrder);
 }

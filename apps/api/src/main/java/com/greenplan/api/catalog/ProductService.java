@@ -1,5 +1,6 @@
 package com.greenplan.api.catalog;
 
+import com.greenplan.api.common.ProductStatus;
 import com.greenplan.api.inventory.InventoryItem;
 import com.greenplan.api.inventory.InventoryItemRepository;
 import com.greenplan.api.orders.OrderItemRepository;
@@ -10,6 +11,8 @@ import java.util.List;
 
 @Service
 public class ProductService {
+
+    private static final int DEFAULT_WARNING_THRESHOLD = 5;
 
     private final ProductRepository productRepository;
     private final InventoryItemRepository inventoryItemRepository;
@@ -27,7 +30,7 @@ public class ProductService {
 
     public List<ProductDto> listPublished() {
         return productRepository.findAll().stream()
-                .filter(product -> "PUBLISHED".equals(product.getStatus()))
+                .filter(product -> ProductStatus.PUBLISHED.name().equals(product.getStatus()))
                 .map(this::toDto)
                 .toList();
     }
@@ -51,7 +54,7 @@ public class ProductService {
         product.setName(request.name());
         product.setDescription(request.description());
         product.setPrice(request.price());
-        product.setStatus("PUBLISHED");
+        product.setStatus(ProductStatus.PUBLISHED.name());
         product.setCategory(request.category());
         product.setVariety(request.variety());
         product.setPlantingMonth(request.plantingMonth());
@@ -61,11 +64,7 @@ public class ProductService {
         product.setImageUrl(request.imageUrl());
         Product saved = productRepository.save(product);
 
-        InventoryItem item = new InventoryItem();
-        item.setProduct(saved);
-        item.setOnlineStock(request.initialStock() == null ? 0 : Math.max(0, request.initialStock()));
-        item.setWarningThreshold(5);
-        inventoryItemRepository.save(item);
+        initializeInventory(saved, request.initialStock());
 
         return toDto(saved);
     }
@@ -88,15 +87,7 @@ public class ProductService {
         Product saved = productRepository.save(product);
 
         if (request.initialStock() != null) {
-            InventoryItem inventory = inventoryItemRepository.findByProductId(saved.getId())
-                    .orElseGet(() -> {
-                        InventoryItem item = new InventoryItem();
-                        item.setProduct(saved);
-                        item.setWarningThreshold(5);
-                        return item;
-                    });
-            inventory.setOnlineStock(Math.max(0, request.initialStock()));
-            inventoryItemRepository.save(inventory);
+            updateInventoryStock(saved.getId(), request.initialStock());
         }
 
         return toDto(saved);
@@ -108,6 +99,25 @@ public class ProductService {
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
         product.setStatus(status);
         productRepository.save(product);
+    }
+
+    private void initializeInventory(Product product, Integer initialStock) {
+        InventoryItem item = new InventoryItem();
+        item.setProduct(product);
+        item.setOnlineStock(initialStock == null ? 0 : Math.max(0, initialStock));
+        item.setWarningThreshold(DEFAULT_WARNING_THRESHOLD);
+        inventoryItemRepository.save(item);
+    }
+
+    private void updateInventoryStock(Long productId, Integer initialStock) {
+        InventoryItem inventory = inventoryItemRepository.findByProductId(productId)
+                .orElseGet(() -> {
+                    InventoryItem item = new InventoryItem();
+                    item.setWarningThreshold(DEFAULT_WARNING_THRESHOLD);
+                    return item;
+                });
+        inventory.setOnlineStock(Math.max(0, initialStock));
+        inventoryItemRepository.save(inventory);
     }
 
     private ProductDto toDto(Product product) {

@@ -230,6 +230,9 @@ export declare function updateTutorial(id: number, payload: {
     published: boolean;
 }): Promise<import("axios").AxiosResponse<any, any, {}>>;
 export declare function deleteTutorial(id: number): Promise<import("axios").AxiosResponse<any, any, {}>>;
+export declare function swapTutorialOrder(id: number, direction: 'UP' | 'DOWN'): Promise<import("axios").AxiosResponse<any, any, {}>>;
+export declare function fetchAdminReviews(): Promise<AdminOrderReviewItem[]>;
+export declare function deleteAdminReview(id: number): Promise<import("axios").AxiosResponse<any, any, {}>>;
 export declare function fetchAdminOrders(): Promise<AdminOrderListItem[]>;
 export declare function fetchAdminOrderDetail(orderId: number): Promise<AdminOrderDetail>;
 export declare function fetchMyProfile(): Promise<StaffProfile>;

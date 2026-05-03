@@ -15,10 +15,76 @@
             </div>
           </div>
           <div class="hero-highlight">
-            <div class="highlight-card">
-              <div class="highlight-label">{{ highlightLabel }}</div>
-              <div class="highlight-title">{{ highlightTitle }}</div>
-              <div class="highlight-desc">{{ highlightDesc }}</div>
+            <div v-if="hasHomePromotions" class="promo-carousel">
+              <div class="promo-slides">
+                <div
+                  v-for="(promo, idx) in homePromotions"
+                  :key="promo.id"
+                  class="promo-slide"
+                  :class="{ active: idx === currentPromoIndex }"
+                >
+                  <div class="highlight-card" :class="{ 'has-image': hasDisplayImage(promo.imageUrl) }">
+                    <img
+                      v-if="hasDisplayImage(promo.imageUrl)"
+                      class="promo-image"
+                      :src="promo.imageUrl || ''"
+                      :alt="promo.title"
+                      loading="lazy"
+                    />
+                    <div class="highlight-overlay">
+                      <div class="highlight-label">首页促销位 {{ idx + 1 }} / {{ homePromotions.length }}</div>
+                      <div class="highlight-title">{{ promo.title }}</div>
+                      <div class="highlight-desc">{{ promo.description }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                v-if="homePromotions.length > 1"
+                class="carousel-arrow carousel-prev"
+                type="button"
+                aria-label="上一个"
+                @click="prevPromotion"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <button
+                v-if="homePromotions.length > 1"
+                class="carousel-arrow carousel-next"
+                type="button"
+                aria-label="下一个"
+                @click="nextPromotion"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+
+              <div v-if="homePromotions.length > 1" class="carousel-dots">
+                <button
+                  v-for="(_, idx) in homePromotions"
+                  :key="idx"
+                  type="button"
+                  class="carousel-dot"
+                  :class="{ active: idx === currentPromoIndex }"
+                  :aria-label="`切换到第 ${idx + 1} 个促销`"
+                  @click="goToPromotion(idx)"
+                />
+              </div>
+            </div>
+
+            <div v-else class="highlight-card" :class="{ 'has-image': topProducts.length > 0 && hasDisplayImage(topProducts[0]?.imageUrl) }">
+              <img
+                v-if="topProducts.length > 0 && hasDisplayImage(topProducts[0]?.imageUrl)"
+                class="promo-image"
+                :src="topProducts[0].imageUrl || ''"
+                :alt="topProducts[0].name"
+                loading="lazy"
+              />
+              <div class="highlight-overlay">
+                <div class="highlight-label">{{ topProducts.length > 0 ? '本周热销' : '本周精选教程' }}</div>
+                <div class="highlight-title">{{ topProducts.length > 0 ? (topProducts[0]?.name || '家庭种植推荐') : (topTutorials[0]?.title || '阳台种植入门教程') }}</div>
+                <div class="highlight-desc">{{ topProducts.length > 0 ? (topProducts[0]?.description || '从分类筛选到购物车下单，流程更顺手。') : (topTutorials[0]?.description || '先看教程再上手，适合新手快速入门。') }}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -87,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../../../layouts/AppLayout.vue'
 import { useAuthStore } from '../../../core/auth/useAuthStore'
@@ -103,6 +169,7 @@ import {
   type PromotionItem,
   type TutorialItem
 } from '../api'
+import { formatPrice, hasDisplayImage } from '../../../utils/format'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -116,43 +183,59 @@ const message = ref('')
 const topProducts = computed(() => products.value.slice(0, 6))
 const topTutorials = computed(() => tutorials.value.slice(0, 6))
 const homePromotions = computed(() => promotions.value.filter((item) => item.strategyType === 'home'))
-const leadPromotion = computed(() => homePromotions.value[0] || null)
+const currentPromoIndex = ref(0)
+const promoTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
-const heroTag = computed(() => leadPromotion.value?.title || '新人推荐 · 春播季')
+const hasHomePromotions = computed(() => homePromotions.value.length > 0)
+const currentPromotion = computed(() => homePromotions.value[currentPromoIndex.value] || null)
+
+const heroTag = computed(() => {
+  if (currentPromotion.value) return currentPromotion.value.title
+  return '新人推荐 · 春播季'
+})
+
 const heroTitle = computed(() => '家庭种植商品与园艺灵感一站式选购')
+
 const heroSubtitle = computed(() => {
-  if (leadPromotion.value?.description) return leadPromotion.value.description
+  if (currentPromotion.value?.description) return currentPromotion.value.description
   return '点击左侧分类可快速筛选商品，加入购物车后可在购物车页统一下单。'
 })
 
-const highlightLabel = computed(() => {
-  if (leadPromotion.value) return '首页促销位'
-  return topProducts.value.length > 0 ? '本周热销' : '本周精选教程'
+function nextPromotion() {
+  if (homePromotions.value.length === 0) return
+  currentPromoIndex.value = (currentPromoIndex.value + 1) % homePromotions.value.length
+}
+
+function prevPromotion() {
+  if (homePromotions.value.length === 0) return
+  currentPromoIndex.value = (currentPromoIndex.value - 1 + homePromotions.value.length) % homePromotions.value.length
+}
+
+function goToPromotion(idx: number) {
+  currentPromoIndex.value = idx
+  resetPromoTimer()
+}
+
+function resetPromoTimer() {
+  if (promoTimer.value) {
+    clearInterval(promoTimer.value)
+  }
+  if (homePromotions.value.length > 1) {
+    promoTimer.value = setInterval(nextPromotion, 4000)
+  }
+}
+
+onMounted(async () => {
+  await Promise.all([reloadProducts(), reloadTutorials(), reloadPromotions()])
+  resetPromoTimer()
 })
 
-const highlightTitle = computed(() => {
-  if (leadPromotion.value) return leadPromotion.value.title
-  if (topProducts.value.length > 0) return topProducts.value[0]?.name || '家庭种植推荐'
-  return topTutorials.value[0]?.title || '阳台种植入门教程'
-})
-
-const highlightDesc = computed(() => {
-  if (leadPromotion.value?.description) return leadPromotion.value.description
-  if (topProducts.value.length > 0) return topProducts.value[0]?.description || '从分类筛选到购物车下单，流程更顺手。'
-  return topTutorials.value[0]?.description || '先看教程再上手，适合新手快速入门。'
+onUnmounted(() => {
+  if (promoTimer.value) clearInterval(promoTimer.value)
 })
 
 function formatDuration(durationMinutes: number | null) {
   return durationMinutes ? `${durationMinutes} 分钟` : '图文教程'
-}
-
-function formatPrice(value: number) {
-  return Number(value).toFixed(2)
-}
-
-function hasDisplayImage(url: string | null | undefined) {
-  if (!url) return false
-  return /^https?:\/\//i.test(url)
 }
 
 onMounted(async () => {
@@ -182,6 +265,7 @@ async function reloadTutorials() {
 async function reloadPromotions() {
   try {
     promotions.value = await fetchPromotions()
+    currentPromoIndex.value = 0
   } catch (err: any) {
     if (!message.value) {
       message.value = err?.response?.data?.message || '加载促销位失败'
@@ -315,14 +399,49 @@ function addToCart(item: Product) {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 260px;
+  min-height: 0;
 }
 
 .highlight-card {
+  position: relative;
+  overflow: hidden;
   width: 100%;
+  height: 260px;
   border-radius: 18px;
   background: rgba(31, 122, 65, 0.95);
   color: #fff;
-  padding: 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 0;
+}
+
+.promo-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  display: block;
+  border-radius: 18px;
+}
+
+.highlight-overlay {
+  position: relative;
+  z-index: 1;
+  padding: 16px 18px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.35) 55%, transparent 100%);
+  border-radius: 0 0 18px 18px;
+}
+
+.highlight-card:not(.has-image) .highlight-overlay {
+  background: transparent;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .highlight-label {
@@ -335,6 +454,7 @@ function addToCart(item: Product) {
   font-size: 22px;
   font-weight: 700;
   margin-bottom: 8px;
+  word-break: break-word;
 }
 
 .highlight-desc {
@@ -344,10 +464,98 @@ function addToCart(item: Product) {
   margin: 0;
 }
 
+.promo-carousel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.promo-slides {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.promo-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.promo-slide.active {
+  opacity: 1;
+  transform: translateX(0);
+  position: relative;
+  pointer-events: auto;
+  flex: 1;
+}
+
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  transition: background 0.2s ease;
+}
+
+.carousel-arrow:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.carousel-prev {
+  left: 8px;
+}
+
+.carousel-next {
+  right: 8px;
+}
+
+.carousel-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  padding-top: 10px;
+}
+
+.carousel-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.carousel-dot.active {
+  background: rgba(255, 255, 255, 0.9);
+  transform: scale(1.25);
+}
+
 .featured-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .featured-product {
@@ -362,17 +570,17 @@ function addToCart(item: Product) {
 
 .product-cover-media {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 4 / 3;
   min-height: 0;
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .product-thumb {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 90px;
-  border-radius: 14px;
+  min-height: 72px;
+  border-radius: 12px;
   background: linear-gradient(135deg, #dff4e4, #f3fbf4);
   color: #1f7a41;
   font-weight: 700;
@@ -386,7 +594,7 @@ function addToCart(item: Product) {
 
 .product-image {
   width: 100%;
-  border-radius: 14px;
+  border-radius: 12px;
   object-fit: cover;
   display: block;
 }
@@ -398,8 +606,12 @@ function addToCart(item: Product) {
 .product-desc {
   margin: 0;
   color: #6b7280;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 12px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .product-meta {
@@ -446,7 +658,7 @@ function addToCart(item: Product) {
   }
 
   .featured-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .cart-strip {

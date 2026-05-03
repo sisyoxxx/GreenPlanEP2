@@ -8,70 +8,27 @@
         </div>
         <div class="head-actions">
           <button class="secondary-btn" :disabled="loading" @click="loadProducts">{{ loading ? '刷新中...' : '刷新' }}</button>
-          <button @click="toggleForm">{{ showForm ? '收起表单' : '新增商品' }}</button>
+          <button @click="openCreate">新增商品</button>
         </div>
       </section>
 
-      <section v-if="showForm" class="page-lite form-card">
-        <h3>{{ editingId ? '编辑商品' : '新增商品' }}</h3>
-        <div class="form-grid">
-          <label>
-            <span>商品名称</span>
-            <input v-model.trim="form.name" type="text" placeholder="请输入商品名称" />
-          </label>
-          <label>
-            <span>SKU</span>
-            <input v-model.trim="form.sku" type="text" placeholder="如：GP-SEED-001" />
-          </label>
-          <label>
-            <span>分类</span>
-            <select v-model="form.category">
-              <option v-for="c in categoryOptions" :key="c" :value="c">{{ c }}</option>
-            </select>
-          </label>
-          <label>
-            <span>品种</span>
-            <input v-model.trim="form.variety" type="text" placeholder="如：樱桃番茄" />
-          </label>
-          <label>
-            <span>产地</span>
-            <input v-model.trim="form.origin" type="text" placeholder="如：山东寿光" />
-          </label>
-          <label>
-            <span>发芽率(%)</span>
-            <input v-model.number="form.germinationRate" type="number" min="0" max="100" step="0.01" />
-          </label>
-          <label>
-            <span>价格</span>
-            <input v-model.number="form.price" type="number" min="0.01" step="0.01" />
-          </label>
-          <label>
-            <span>库存</span>
-            <input v-model.number="form.initialStock" type="number" min="0" />
-          </label>
-          <label>
-            <span>种植月份</span>
-            <input v-model.trim="form.plantingMonth" type="text" placeholder="如：3-6月" />
-          </label>
-          <label>
-            <span>适宜地区</span>
-            <input v-model.trim="form.suitableRegion" type="text" placeholder="如：华东/华南" />
-          </label>
-          <label class="full-span">
-            <span>图片地址</span>
-            <input v-model.trim="form.imageUrl" type="text" placeholder="https://..." />
-          </label>
-          <label class="full-span">
-            <span>商品描述</span>
-            <textarea v-model.trim="form.description" rows="4" placeholder="请输入商品描述"></textarea>
-          </label>
-        </div>
-
-        <div class="form-actions">
-          <button :disabled="submitting" @click="submitProduct">{{ submitting ? '保存中...' : editingId ? '保存修改' : '创建商品' }}</button>
+      <BaseModal
+        :open="showForm"
+        :title="editingId ? '编辑商品' : '新增商品'"
+        size="lg"
+        @close="cancelEdit"
+      >
+        <ProductForm
+          :form="form"
+          :is-edit="!!editingId"
+          :submitting="submitting"
+          @update:form="Object.assign(form, $event)"
+        />
+        <template #footer>
           <button class="secondary-btn" :disabled="submitting" @click="cancelEdit">取消</button>
-        </div>
-      </section>
+          <button :disabled="submitting" @click="submitProduct">{{ submitting ? '保存中...' : (editingId ? '保存修改' : '创建商品') }}</button>
+        </template>
+      </BaseModal>
 
       <section class="page-lite table-card">
         <div class="table-tools">
@@ -81,58 +38,12 @@
         <p v-if="message" class="message">{{ message }}</p>
         <p v-if="error" class="error">{{ error }}</p>
 
-        <div v-if="loading && products.length === 0" class="empty-state">商品加载中...</div>
-        <div v-else-if="displayProducts.length === 0" class="empty-state">暂无匹配商品</div>
-
-        <div v-else class="table-wrap">
-          <table class="prod-table">
-            <thead>
-              <tr>
-                <th>商品</th>
-                <th>SKU</th>
-                <th>分类</th>
-                <th>品种</th>
-                <th>产地</th>
-                <th>发芽率</th>
-                <th>价格</th>
-                <th>库存</th>
-                <th>状态</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in displayProducts" :key="item.id">
-                <td>
-                  <div class="name-cell">
-                    <img v-if="item.imageUrl" :src="item.imageUrl" alt="product" />
-                    <div>
-                      <strong>{{ item.name }}</strong>
-                      <p>{{ item.description || '暂无描述' }}</p>
-                    </div>
-                  </div>
-                </td>
-                <td>{{ item.sku }}</td>
-                <td>{{ item.category || '-' }}</td>
-                <td>{{ item.variety || '-' }}</td>
-                <td>{{ item.origin || '-' }}</td>
-                <td>{{ Number(item.germinationRate || 0).toFixed(2) }}%</td>
-                <td>¥{{ Number(item.price).toFixed(2) }}</td>
-                <td>{{ item.onlineStock }}</td>
-                <td>
-                  <span :class="['status-tag', item.status === 'PUBLISHED' ? 'on' : 'off']">
-                    {{ item.status === 'PUBLISHED' ? '在售' : '下架' }}
-                  </span>
-                </td>
-                <td>
-                  <div class="row-actions">
-                    <button class="text-link" @click="startEdit(item)">编辑</button>
-                    <button class="text-link" @click="toggleStatus(item)">{{ item.status === 'PUBLISHED' ? '下架' : '上架' }}</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <ProductTable
+          :items="displayProducts"
+          :loading="loading"
+          @edit="startEdit"
+          @toggle-status="toggleStatus"
+        />
       </section>
     </div>
   </AdminLayout>
@@ -142,6 +53,9 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '../../../layouts/AdminLayout.vue'
+import BaseModal from '../../../shared/components/BaseModal.vue'
+import ProductForm from '../components/ProductForm.vue'
+import ProductTable from '../components/ProductTable.vue'
 import { createProduct, fetchAdminProducts, updateProduct, updateProductStatus, type AdminProduct } from '../api'
 
 const route = useRoute()
@@ -208,11 +122,7 @@ async function loadProducts() {
   }
 }
 
-function toggleForm() {
-  if (showForm.value) {
-    cancelEdit()
-    return
-  }
+function openCreate() {
   resetForm()
   showForm.value = true
 }
@@ -345,38 +255,10 @@ async function toggleStatus(item: AdminProduct) {
   color: #6b7280;
 }
 
-.head-actions,
-.form-actions,
-.row-actions {
+.head-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-.form-card {
-  display: grid;
-  gap: 12px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-label {
-  display: grid;
-  gap: 6px;
-}
-
-label span {
-  font-size: 12px;
-  color: #4b5563;
-  font-weight: 700;
-}
-
-.full-span {
-  grid-column: 1 / -1;
 }
 
 .table-card {
@@ -392,79 +274,6 @@ label span {
   width: 100%;
 }
 
-.table-wrap {
-  overflow-x: auto;
-}
-
-.prod-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.prod-table th,
-.prod-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #edf1ee;
-  text-align: left;
-  vertical-align: top;
-}
-
-.prod-table th {
-  color: #6b7280;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.name-cell {
-  display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
-  gap: 10px;
-}
-
-.name-cell img {
-  width: 54px;
-  height: 54px;
-  border-radius: 10px;
-  object-fit: cover;
-  border: 1px solid #e3ece5;
-}
-
-.name-cell strong {
-  color: #1f2937;
-}
-
-.name-cell p {
-  margin: 4px 0 0;
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.status-tag {
-  display: inline-flex;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.status-tag.on {
-  background: #e8f6eb;
-  color: #1f7a41;
-}
-
-.status-tag.off {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.text-link {
-  border: none;
-  background: transparent;
-  color: #1f7a41;
-  padding: 0;
-  font-size: 13px;
-}
-
 .message {
   margin: 0;
   color: #1f7a41;
@@ -477,26 +286,10 @@ label span {
   font-weight: 600;
 }
 
-.empty-state {
-  color: #6b7280;
-  text-align: center;
-  padding: 24px 0;
-}
-
-@media (max-width: 1280px) {
-  .form-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 760px) {
   .page-head {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>

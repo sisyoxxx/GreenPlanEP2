@@ -1,5 +1,7 @@
 package com.greenplan.api.orders;
 
+import com.greenplan.api.common.OrderStatus;
+import com.greenplan.api.common.ShippingStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,8 +24,9 @@ public class Order {
     @Column(name = "buyer_id", nullable = false)
     private Long buyerId;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
-    private String status;
+    private OrderStatus status;
 
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
@@ -34,8 +37,9 @@ public class Order {
     @Column(name = "tracking_no", length = 64)
     private String trackingNo;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "shipping_status", length = 32)
-    private String shippingStatus;
+    private ShippingStatus shippingStatus;
 
     @Column(name = "shipped_at")
     private LocalDateTime shippedAt;

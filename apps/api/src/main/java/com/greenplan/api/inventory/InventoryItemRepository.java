@@ -10,6 +10,10 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, Lo
     Optional<InventoryItem> findByProductId(Long productId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE InventoryItem i SET i.onlineStock = i.onlineStock - :quantity WHERE i.product.id = :productId AND i.onlineStock >= :quantity")
+    int deductStock(Long productId, Integer quantity);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "update inventory_items set version = 0 where version is null", nativeQuery = true)
     int initializeMissingVersions();
 }

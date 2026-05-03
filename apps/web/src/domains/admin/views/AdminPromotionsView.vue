@@ -13,24 +13,27 @@
       </div>
     </section>
 
-    <section class="page-lite editor-card">
-      <h3>新增促销位</h3>
+    <section v-if="showForm" class="page-lite editor-card">
+      <h3>{{ editingId ? '编辑促销位' : '新增促销位' }}</h3>
       <input v-model.trim="form.title" placeholder="请输入促销标题" />
       <input v-model.trim="form.imageUrl" placeholder="图片地址，可选" />
       <textarea v-model.trim="form.description" rows="4" placeholder="请输入促销说明"></textarea>
       <div class="form-actions">
         <button @click="submitPromotion" :disabled="submitting">
-          {{ submitting ? '提交中...' : '新增促销位' }}
+          {{ submitting ? '提交中...' : (editingId ? '保存修改' : '新增促销位') }}
         </button>
-        <button class="secondary-btn" @click="resetForm" :disabled="submitting">清空</button>
+        <button class="secondary-btn" @click="cancelEdit" :disabled="submitting">取消</button>
       </div>
       <p v-if="message" class="message">{{ message }}</p>
     </section>
 
     <section class="page-lite table-card">
       <div class="table-head">
-        <h3>{{ currentTypeLabel }}</h3>
-        <span class="count-chip">{{ filteredPromotions.length }} 条</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <h3>{{ currentTypeLabel }}</h3>
+          <span class="count-chip">{{ filteredPromotions.length }} 条</span>
+        </div>
+        <button @click="openCreate">新增促销位</button>
       </div>
 
       <div v-if="loading && promotions.length === 0" class="empty-state">促销数据加载中...</div>
@@ -46,17 +49,21 @@
               <th>图片地址</th>
               <th>状态</th>
               <th>创建时间</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="item in filteredPromotions" :key="item.id">
               <td class="cell-title">{{ item.title }}</td>
               <td class="cell-desc">{{ item.description }}</td>
-              <td class="cell-image">{{ item.imageUrl || '未配置' }}</td>
+              <td class="cell-image" :title="item.imageUrl || ''">{{ item.imageUrl ? '已配置' : '未配置' }}</td>
               <td>
                 <span class="status-badge">{{ item.status }}</span>
               </td>
               <td class="cell-time">{{ formatDateTime(item.createdAt) }}</td>
+              <td>
+                <button class="secondary-btn" @click="startEdit(item)">编辑</button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -69,7 +76,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AdminLayout from '../../../layouts/AdminLayout.vue'
-import { createPromotion, fetchPromotions, type AdminPromotion } from '../api'
+import { createPromotion, fetchPromotions, updatePromotion, type AdminPromotion } from '../api'
 
 const route = useRoute()
 
@@ -78,6 +85,8 @@ const loading = ref(false)
 const submitting = ref(false)
 const error = ref('')
 const message = ref('')
+const editingId = ref<number | null>(null)
+const showForm = ref(false)
 
 const form = reactive({
   title: '',
@@ -117,20 +126,54 @@ async function submitPromotion() {
 
   submitting.value = true
   try {
-    await createPromotion({
-      title: form.title,
-      strategyType: currentType.value,
-      description: form.description,
-      imageUrl: form.imageUrl
-    })
+    if (editingId.value) {
+      await updatePromotion(editingId.value, {
+        title: form.title,
+        strategyType: currentType.value,
+        description: form.description,
+        imageUrl: form.imageUrl
+      })
+      message.value = '促销位已更新'
+    } else {
+      await createPromotion({
+        title: form.title,
+        strategyType: currentType.value,
+        description: form.description,
+        imageUrl: form.imageUrl
+      })
+      message.value = '促销位已创建'
+    }
     resetForm()
-    message.value = '促销位已创建'
+    showForm.value = false
+    editingId.value = null
     await loadPromotions()
   } catch (err: any) {
-    message.value = err?.response?.data?.message || '促销位创建失败'
+    message.value = err?.response?.data?.message || (editingId.value ? '促销位更新失败' : '促销位创建失败')
   } finally {
     submitting.value = false
   }
+}
+
+function startEdit(item: AdminPromotion) {
+  editingId.value = item.id
+  form.title = item.title
+  form.imageUrl = item.imageUrl || ''
+  form.description = item.description
+  message.value = ''
+  showForm.value = true
+}
+
+function openCreate() {
+  editingId.value = null
+  resetForm()
+  message.value = ''
+  showForm.value = true
+}
+
+function cancelEdit() {
+  resetForm()
+  editingId.value = null
+  showForm.value = false
 }
 
 function resetForm() {
@@ -224,7 +267,8 @@ function formatDateTime(value: string | null) {
 }
 
 .cell-desc {
-  min-width: 300px;
+  min-width: 160px;
+  max-width: 260px;
   color: #4b5563;
   line-height: 1.7;
 }

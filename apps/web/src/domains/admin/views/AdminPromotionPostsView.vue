@@ -5,54 +5,62 @@
         <h2 class="page-title">推广文章</h2>
         <p class="page-desc">支持发布、编辑、删除，并可上传配图用于活动展示。</p>
       </div>
-      <button class="secondary-btn" @click="loadData" :disabled="loading">
-        {{ loading ? '刷新中...' : '刷新列表' }}
-      </button>
+      <div class="head-actions">
+        <button class="secondary-btn" @click="loadData" :disabled="loading">
+          {{ loading ? '刷新中...' : '刷新列表' }}
+        </button>
+        <button @click="openCreate">新增推广文章</button>
+      </div>
     </section>
 
-    <section class="page-lite editor-card">
-      <h3>{{ editingId ? '编辑推广文章' : '新增推广文章' }}</h3>
+    <BaseModal
+      :open="showForm"
+      :title="editingId ? '编辑推广文章' : '新增推广文章'"
+      size="lg"
+      @close="cancelEdit"
+    >
+      <div class="modal-form">
+        <select v-model.number="form.promotionId">
+          <option :value="0" disabled>请选择关联促销位</option>
+          <option v-for="item in promotions" :key="item.id" :value="item.id">{{ item.title }}</option>
+        </select>
 
-      <select v-model.number="form.promotionId">
-        <option :value="0" disabled>请选择关联促销位</option>
-        <option v-for="item in promotions" :key="item.id" :value="item.id">{{ item.title }}</option>
-      </select>
+        <select v-model="form.channel">
+          <option value="community">社区</option>
+          <option value="home">首页位</option>
+          <option value="product">商品页位</option>
+        </select>
 
-      <select v-model="form.channel">
-        <option value="community">社区</option>
-        <option value="home">首页位</option>
-        <option value="product">商品页位</option>
-      </select>
+        <textarea v-model.trim="form.content" rows="4" placeholder="请输入推广内容"></textarea>
 
-      <textarea v-model.trim="form.content" rows="4" placeholder="请输入推广内容"></textarea>
-
-      <div class="image-field">
-        <p class="field-label">配图（可选）</p>
-        <div class="image-row">
-          <label class="secondary-btn file-btn">
-            上传图片
-            <input type="file" accept="image/*" @change="onImageChange" />
-          </label>
-          <button class="secondary-btn" type="button" @click="clearImage" :disabled="!form.imageUrl">移除图片</button>
+        <div class="image-field">
+          <p class="field-label">配图（可选）</p>
+          <div class="image-row">
+            <label class="secondary-btn file-btn">
+              上传图片
+              <input type="file" accept="image/*" @change="onImageChange" />
+            </label>
+            <button class="secondary-btn" type="button" @click="clearImage" :disabled="!form.imageUrl">移除图片</button>
+          </div>
+          <img v-if="form.imageUrl" class="preview-image" :src="form.imageUrl" alt="promotion image" />
         </div>
-        <img v-if="form.imageUrl" class="preview-image" :src="form.imageUrl" alt="promotion image" />
-      </div>
 
-      <div class="form-actions">
+        <p v-if="message" class="message">{{ message }}</p>
+      </div>
+      <template #footer>
+        <button class="secondary-btn" @click="cancelEdit" :disabled="submitting">取消</button>
         <button @click="submitPost" :disabled="submitting">
           {{ submitting ? '提交中...' : editingId ? '保存修改' : '发布推广文案' }}
         </button>
-        <button class="secondary-btn" @click="resetForm" :disabled="submitting">清空</button>
-        <button v-if="editingId" class="secondary-btn" @click="cancelEdit" :disabled="submitting">取消编辑</button>
-      </div>
-      <p v-if="message" class="message">{{ message }}</p>
-    </section>
+      </template>
+    </BaseModal>
 
     <section class="page-lite table-card">
       <div class="table-head">
         <h3>推广文章列表</h3>
         <span class="count-chip">{{ filteredPosts.length }} / {{ posts.length }} 条</span>
       </div>
+      <p v-if="message && !showForm" class="message">{{ message }}</p>
 
       <div class="table-filters">
         <input v-model.trim="filterKeyword" type="text" placeholder="搜索推广内容或促销位标题" />
@@ -70,18 +78,20 @@
 
       <div v-else class="card-list">
         <article v-for="item in filteredPosts" :key="item.id" class="post-card">
-          <div class="post-meta">
-            <span class="channel-chip">{{ channelLabelMap[item.channel] || item.channel }}</span>
-            <span>{{ promotionTitleMap[item.promotionId] || `促销位 #${item.promotionId}` }}</span>
-            <span>{{ formatDateTime(item.publishedAt || item.createdAt) }}</span>
+          <div class="post-body">
+            <div class="post-meta">
+              <span class="channel-chip">{{ channelLabelMap[item.channel] || item.channel }}</span>
+              <span>{{ promotionTitleMap[item.promotionId] || `促销位 #${item.promotionId}` }}</span>
+              <span>{{ formatDateTime(item.publishedAt || item.createdAt) }}</span>
+            </div>
+
+            <img v-if="item.imageUrl" class="post-image" :src="item.imageUrl" alt="post image" />
+            <p class="post-content">{{ item.content }}</p>
           </div>
 
-          <img v-if="item.imageUrl" class="post-image" :src="item.imageUrl" alt="post image" />
-          <p class="post-content">{{ item.content }}</p>
-
           <div class="post-actions">
-            <button class="secondary-btn" @click="startEdit(item)">编辑</button>
-            <button class="secondary-btn danger-btn" :disabled="deletingId === item.id" @click="removePost(item)">
+            <button class="action-btn edit-btn" @click="startEdit(item)">编辑</button>
+            <button class="action-btn delete-btn" :disabled="deletingId === item.id" @click="removePost(item)">
               {{ deletingId === item.id ? '删除中...' : '删除' }}
             </button>
           </div>
@@ -94,6 +104,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import AdminLayout from '../../../layouts/AdminLayout.vue'
+import BaseModal from '../../../shared/components/BaseModal.vue'
 import {
   createPromotionPost,
   deletePromotionPost,
@@ -103,6 +114,7 @@ import {
   type AdminPromotion,
   type AdminPromotionPost
 } from '../api'
+import { formatDateTime } from '../../../utils/format'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -110,6 +122,7 @@ const deletingId = ref<number | null>(null)
 const editingId = ref<number | null>(null)
 const error = ref('')
 const message = ref('')
+const showForm = ref(false)
 const posts = ref<AdminPromotionPost[]>([])
 const promotions = ref<AdminPromotion[]>([])
 const filterKeyword = ref('')
@@ -188,7 +201,7 @@ async function submitPost() {
       message.value = '推广文章已发布'
     }
 
-    resetForm()
+    cancelEdit()
     await loadData()
   } catch (err: any) {
     message.value = err?.response?.data?.message || (editingId.value ? '推广文章更新失败' : '推广文章发布失败')
@@ -203,12 +216,18 @@ function startEdit(item: AdminPromotionPost) {
   form.channel = normalizeChannel(item.channel)
   form.content = item.content
   form.imageUrl = item.imageUrl || ''
-  message.value = '已载入编辑内容'
+  message.value = ''
+  showForm.value = true
 }
 
 function cancelEdit() {
   resetForm()
-  message.value = '已取消编辑'
+  showForm.value = false
+}
+
+function openCreate() {
+  resetForm()
+  showForm.value = true
 }
 
 async function removePost(item: AdminPromotionPost) {
@@ -217,7 +236,7 @@ async function removePost(item: AdminPromotionPost) {
   message.value = ''
   try {
     await deletePromotionPost(item.id)
-    if (editingId.value === item.id) resetForm()
+    if (editingId.value === item.id) cancelEdit()
     message.value = '推广文章已删除'
     await loadData()
   } catch (err: any) {
@@ -233,6 +252,7 @@ function resetForm() {
   form.channel = 'community'
   form.imageUrl = ''
   form.promotionId = promotions.value[0]?.id || 0
+  message.value = ''
 }
 
 function clearImage() {
@@ -256,16 +276,25 @@ function normalizeChannel(value: string) {
   return 'community'
 }
 
-function formatDateTime(value: string | null) {
-  if (!value) return '未记录'
-  return value.replace('T', ' ').slice(0, 16)
-}
+
+
 </script>
 
 <style scoped>
 .page-head,
 .editor-card,
 .table-card {
+  display: grid;
+  gap: 14px;
+}
+
+.head-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modal-form {
   display: grid;
   gap: 14px;
 }
@@ -290,13 +319,64 @@ function formatDateTime(value: string | null) {
 
 .table-head,
 .form-actions,
-.post-actions,
 .image-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.post-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid #e3e8e3;
+  background: #f2f6f2;
+  color: #1f2937;
+}
+
+.action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(31, 122, 65, 0.08);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.edit-btn:hover {
+  background: #e8f0e8;
+  border-color: #cfe2d3;
+}
+
+.delete-btn {
+  border-color: #f2cbcb;
+  color: #b42318;
+  background: #fff7f7;
+}
+
+.delete-btn:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+  box-shadow: 0 4px 12px rgba(180, 35, 24, 0.08);
 }
 
 .table-filters {
@@ -329,11 +409,18 @@ function formatDateTime(value: string | null) {
 
 .post-card {
   display: grid;
-  gap: 10px;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
   padding: 14px;
   border-radius: 14px;
   border: 1px solid #e5eee7;
   background: #fbfdfb;
+}
+
+.post-body {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
 }
 
 .post-meta {

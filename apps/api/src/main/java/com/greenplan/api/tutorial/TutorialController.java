@@ -58,4 +58,11 @@ public class TutorialController {
         tutorialService.delete(id);
         return ApiResponse.ok("Tutorial deleted");
     }
+
+    @PostMapping("/admin/tutorials/{id}/swap-order")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> swapOrder(@PathVariable Long id, @RequestBody SwapOrderRequest request) {
+        tutorialService.swapDisplayOrder(id, request.direction());
+        return ApiResponse.ok("排序已更新");
+    }
 }

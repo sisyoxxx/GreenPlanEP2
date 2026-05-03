@@ -44,6 +44,19 @@ public class ReviewService {
                 .toList();
     }
 
+    public List<ProductReviewDto> listAll() {
+        return productReviewRepository.findAllByOrderByIdDesc().stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteReview(Long reviewId) {
+        ProductReview review = productReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new IllegalArgumentException("评价不存在"));
+        productReviewRepository.delete(review);
+    }
+
     @Transactional
     public ProductReviewDto createReview(Long orderId, CreateReviewRequest request, JwtUserPrincipal principal) {
         if (principal.getRole() != RoleCode.BUYER) {
@@ -55,7 +68,7 @@ public class ReviewService {
         if (!principal.getId().equals(order.getBuyerId())) {
             throw new IllegalArgumentException("当前订单不属于你");
         }
-        if ("PAID".equalsIgnoreCase(order.getStatus()) || "PENDING".equalsIgnoreCase(order.getStatus())) {
+        if (order.getStatus() == com.greenplan.api.common.OrderStatus.PAID) {
             throw new IllegalArgumentException("订单发货后才能评价");
         }
 
