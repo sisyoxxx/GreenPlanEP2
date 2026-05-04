@@ -66,6 +66,18 @@ export const useBuyerCommunityStore = defineStore('buyer-community', () => {
     try {
       const data = await fetchCommunityPosts()
       posts.value = data.map(normalizePost).filter((x): x is CommunityPostItem => !!x)
+      // Fallback: 如果后端为空，尝试从 localStorage 读取旧数据
+      if (posts.value.length === 0) {
+        try {
+          const raw = localStorage.getItem('gp2_buyer_community_posts')
+          if (raw) {
+            const legacy = JSON.parse(raw) as any[]
+            posts.value = legacy.map(normalizePost).filter((x): x is CommunityPostItem => !!x)
+          }
+        } catch {
+          // ignore localStorage parse errors
+        }
+      }
     } catch (err: any) {
       error.value = err?.response?.data?.message || '加载社区帖子失败'
     } finally {

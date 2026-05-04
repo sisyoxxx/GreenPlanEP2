@@ -355,13 +355,13 @@ function goCart() {
   router.push('/cart')
 }
 
-function addToCart(item: Product) {
+async function addToCart(item: Product) {
   if (!auth.isLoggedIn || auth.role !== 'BUYER') {
     message.value = '加入购物车前请先登录买家账户。'
     router.push('/login')
     return
   }
-  cartStore.addItem(item, 1)
+  await cartStore.addItem(item, 1)
   message.value = `${item.name} 已加入购物车。`
 }
 </script>

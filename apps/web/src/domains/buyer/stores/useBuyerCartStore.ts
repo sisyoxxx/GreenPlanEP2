@@ -1,7 +1,13 @@
 import { defineStore } from 'pinia'
 import type { Product } from '../api'
-
-const STORAGE_KEY = 'gp2_buyer_cart'
+import {
+  fetchCart,
+  addCartItem,
+  updateCartItem,
+  removeCartItem,
+  clearCart,
+  type CartItemDto
+} from '../api'
 
 export interface BuyerCartItem {
   id: number
@@ -17,30 +23,26 @@ export interface BuyerCartItem {
   quantity: number
 }
 
-function safeParseCart(value: string | null): BuyerCartItem[] {
-  if (!value) return []
-  try {
-    const parsed = JSON.parse(value) as BuyerCartItem[]
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-function saveCart(items: BuyerCartItem[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
-}
-
-function toCartItem(product: Product, quantity = 1): BuyerCartItem {
+function toCartItem(dto: CartItemDto): BuyerCartItem {
   return {
-    ...product,
-    quantity
+    id: dto.productId,
+    sku: dto.sku,
+    name: dto.name,
+    description: dto.description,
+    price: dto.price,
+    category: dto.category,
+    plantingMonth: dto.plantingMonth,
+    suitableRegion: dto.suitableRegion,
+    imageUrl: dto.imageUrl,
+    onlineStock: dto.onlineStock,
+    quantity: dto.quantity
   }
 }
 
 export const useBuyerCartStore = defineStore('buyer-cart', {
   state: () => ({
-    items: safeParseCart(localStorage.getItem(STORAGE_KEY))
+    items: [] as BuyerCartItem[],
+    loaded: false
   }),
   getters: {
     itemCount: (state) => state.items.reduce((sum, item) => sum + item.quantity, 0),
@@ -49,8 +51,15 @@ export const useBuyerCartStore = defineStore('buyer-cart', {
     isEmpty: (state) => state.items.length === 0
   },
   actions: {
-    persist() {
-      saveCart(this.items)
+    async loadCart() {
+      try {
+        const dtos = await fetchCart()
+        this.items = dtos.map(toCartItem)
+        this.loaded = true
+      } catch {
+        this.items = []
+        this.loaded = false
+      }
     },
     syncProduct(product: Product) {
       const current = this.items.find((item) => item.id === product.id)
@@ -68,50 +77,51 @@ export const useBuyerCartStore = defineStore('buyer-cart', {
       if (current.quantity > product.onlineStock && product.onlineStock > 0) {
         current.quantity = product.onlineStock
       }
-      this.persist()
     },
-    addItem(product: Product, quantity = 1) {
+    async addItem(product: Product, quantity = 1) {
       const safeQuantity = Math.max(1, Number(quantity) || 1)
       const existed = this.items.find((item) => item.id === product.id)
 
       if (existed) {
-        existed.quantity = Math.max(1, Math.min(existed.quantity + safeQuantity, Math.max(1, product.onlineStock || 1)))
-        this.syncProduct(product)
-        return
+        const newQty = Math.max(
+          1,
+          Math.min(existed.quantity + safeQuantity, Math.max(1, product.onlineStock || 1))
+        )
+        await updateCartItem(product.id, newQty)
+      } else {
+        await addCartItem(product.id, Math.min(safeQuantity, Math.max(1, product.onlineStock || 1)))
       }
-
-      this.items.push(toCartItem(product, Math.min(safeQuantity, Math.max(1, product.onlineStock || 1))))
-      this.persist()
+      await this.loadCart()
     },
-    setQuantity(productId: number, quantity: number) {
+    async setQuantity(productId: number, quantity: number) {
       const item = this.items.find((entry) => entry.id === productId)
       if (!item) return
 
       const safeQuantity = Math.max(1, Math.min(Number(quantity) || 1, Math.max(1, item.onlineStock || 1)))
-      item.quantity = safeQuantity
-      this.persist()
+      await updateCartItem(productId, safeQuantity)
+      await this.loadCart()
     },
-    increase(productId: number) {
+    async increase(productId: number) {
       const item = this.items.find((entry) => entry.id === productId)
       if (!item) return
-      this.setQuantity(productId, item.quantity + 1)
+      await this.setQuantity(productId, item.quantity + 1)
     },
-    decrease(productId: number) {
+    async decrease(productId: number) {
       const item = this.items.find((entry) => entry.id === productId)
       if (!item) return
       if (item.quantity <= 1) {
-        this.removeItem(productId)
+        await this.removeItem(productId)
         return
       }
-      this.setQuantity(productId, item.quantity - 1)
+      await this.setQuantity(productId, item.quantity - 1)
     },
-    removeItem(productId: number) {
-      this.items = this.items.filter((item) => item.id !== productId)
-      this.persist()
+    async removeItem(productId: number) {
+      await removeCartItem(productId)
+      await this.loadCart()
     },
-    clear() {
+    async clear() {
+      await clearCart()
       this.items = []
-      this.persist()
     },
     buildOrderPayload() {
       return this.items.map((item) => ({

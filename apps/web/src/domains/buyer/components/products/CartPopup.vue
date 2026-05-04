@@ -58,9 +58,9 @@ const emit = defineEmits<{
 
 const cartStore = useBuyerCartStore()
 
-function updateQuantity(productId: number, event: Event) {
+async function updateQuantity(productId: number, event: Event) {
   const value = Number((event.target as HTMLInputElement | null)?.value ?? 1)
-  cartStore.setQuantity(productId, value)
+  await cartStore.setQuantity(productId, value)
 }
 </script>
 

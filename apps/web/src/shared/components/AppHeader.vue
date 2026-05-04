@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../core/auth/useAuthStore'
 import { useBuyerCartStore } from '../../domains/buyer/stores/useBuyerCartStore'
@@ -109,12 +109,29 @@ function goCart() {
   router.push('/cart')
 }
 
-function logout() {
+async function logout() {
   showDropdown.value = false
   auth.logout()
-  cartStore.clear()
+  await cartStore.clear()
   router.push('/login')
 }
+
+onMounted(() => {
+  if (auth.isLoggedIn) {
+    cartStore.loadCart()
+  }
+})
+
+watch(
+  () => auth.isLoggedIn,
+  (loggedIn) => {
+    if (loggedIn) {
+      cartStore.loadCart()
+    } else {
+      cartStore.clear()
+    }
+  }
+)
 </script>
 
 <style scoped>

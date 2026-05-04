@@ -262,9 +262,9 @@ function requireBuyerLogin(actionText: string) {
   return true
 }
 
-function addToCart(item: Product) {
+async function addToCart(item: Product) {
   if (!requireBuyerLogin('加入购物车')) return
-  cartStore.addItem(item, 1)
+  await cartStore.addItem(item, 1)
   message.value = `${item.name} 已加入购物车。`
 }
 

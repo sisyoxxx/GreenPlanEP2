@@ -86,6 +86,29 @@ onMounted(async () => {
     const detail = await fetchCommunityPostDetail(id)
     liked.value = detail.liked
     comments.value = detail.comments
+    // Fallback: 如果后端评论为空，尝试从 localStorage 读取旧数据
+    if (comments.value.length === 0) {
+      try {
+        const raw = localStorage.getItem('gp2_buyer_post_comments')
+        if (raw) {
+          const legacy = JSON.parse(raw) as any[]
+          comments.value = legacy
+            .filter((item) => Number(item?.postId) === id)
+            .map((item) => ({
+              id: Number(item.id) || Date.now() + Math.random(),
+              postId: id,
+              parentId: item.parentId ? Number(item.parentId) : null,
+              author: String(item.author || '匿名'),
+              authorId: 0,
+              content: String(item.content || ''),
+              mine: false,
+              time: String(item.time || '')
+            }))
+        }
+      } catch {
+        // ignore localStorage parse errors
+      }
+    }
   } catch {
     // ignore
   } finally {

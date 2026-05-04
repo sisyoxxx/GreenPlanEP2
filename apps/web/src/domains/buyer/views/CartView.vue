@@ -197,7 +197,9 @@ async function submitOrder(payload: Array<{ productId: number; quantity: number 
 
   try {
     const res = await createOrder(payload) as { data: { id: number; orderNo: string } }
-    removeIds.forEach((id) => cartStore.removeItem(id))
+    for (const id of removeIds) {
+      await cartStore.removeItem(id)
+    }
     selectedIds.value = new Set()
     message.value = `订单提交成功，订单号 ${res.data.orderNo}`
     router.push(`/orders?focus=${res.data.id}`)
@@ -208,9 +210,11 @@ async function submitOrder(payload: Array<{ productId: number; quantity: number 
   }
 }
 
-function removeSelected() {
+async function removeSelected() {
   if (selectedIds.value.size === 0) return
-  Array.from(selectedIds.value).forEach((id) => cartStore.removeItem(id))
+  for (const id of Array.from(selectedIds.value)) {
+    await cartStore.removeItem(id)
+  }
   selectedIds.value = new Set()
   message.value = '已删除选中的商品。'
 }

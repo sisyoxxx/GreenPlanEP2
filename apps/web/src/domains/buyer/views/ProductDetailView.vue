@@ -194,10 +194,10 @@ async function confirmPay() {
   }
 }
 
-function addToCart() {
+async function addToCart() {
   if (!product.value) return
   if (!ensureBuyer('加入购物车')) return
-  cartStore.addItem(product.value, payQuantity.value)
+  await cartStore.addItem(product.value, payQuantity.value)
   message.value = `${product.value.name} 已加入购物车。`
 }
 

@@ -14,6 +14,7 @@ export interface BuyerCartItem {
 }
 export declare const useBuyerCartStore: import("pinia").StoreDefinition<"buyer-cart", {
     items: BuyerCartItem[];
+    loaded: boolean;
 }, {
     itemCount: (state: {
         items: {
@@ -29,8 +30,10 @@ export declare const useBuyerCartStore: import("pinia").StoreDefinition<"buyer-c
             onlineStock: number;
             quantity: number;
         }[];
+        loaded: boolean;
     } & import("pinia").PiniaCustomStateProperties<{
         items: BuyerCartItem[];
+        loaded: boolean;
     }>) => number;
     uniqueCount: (state: {
         items: {
@@ -46,8 +49,10 @@ export declare const useBuyerCartStore: import("pinia").StoreDefinition<"buyer-c
             onlineStock: number;
             quantity: number;
         }[];
+        loaded: boolean;
     } & import("pinia").PiniaCustomStateProperties<{
         items: BuyerCartItem[];
+        loaded: boolean;
     }>) => number;
     totalAmount: (state: {
         items: {
@@ -63,8 +68,10 @@ export declare const useBuyerCartStore: import("pinia").StoreDefinition<"buyer-c
             onlineStock: number;
             quantity: number;
         }[];
+        loaded: boolean;
     } & import("pinia").PiniaCustomStateProperties<{
         items: BuyerCartItem[];
+        loaded: boolean;
     }>) => number;
     isEmpty: (state: {
         items: {
@@ -80,18 +87,20 @@ export declare const useBuyerCartStore: import("pinia").StoreDefinition<"buyer-c
             onlineStock: number;
             quantity: number;
         }[];
+        loaded: boolean;
     } & import("pinia").PiniaCustomStateProperties<{
         items: BuyerCartItem[];
+        loaded: boolean;
     }>) => boolean;
 }, {
-    persist(): void;
+    loadCart(): Promise<void>;
     syncProduct(product: Product): void;
-    addItem(product: Product, quantity?: number): void;
-    setQuantity(productId: number, quantity: number): void;
-    increase(productId: number): void;
-    decrease(productId: number): void;
-    removeItem(productId: number): void;
-    clear(): void;
+    addItem(product: Product, quantity?: number): Promise<void>;
+    setQuantity(productId: number, quantity: number): Promise<void>;
+    increase(productId: number): Promise<void>;
+    decrease(productId: number): Promise<void>;
+    removeItem(productId: number): Promise<void>;
+    clear(): Promise<void>;
     buildOrderPayload(): {
         productId: number;
         quantity: number;
