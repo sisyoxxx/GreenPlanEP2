@@ -32,7 +32,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/products", "/api/products/**", "/api/announcements", "/api/promotions", "/api/tutorials/**", "/api/ai/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/products", "/api/products/**", "/api/announcements", "/api/promotions", "/api/tutorials/**", "/api/ai/**", "/api/community/posts", "/api/community/posts/**").permitAll()
                         .requestMatchers("/api/products/*/reviews").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

@@ -136,4 +136,57 @@ export declare function updateMyAddress(id: number, payload: {
     isDefault: boolean;
 }): Promise<MyAddress>;
 export declare function deleteMyAddress(id: number): Promise<import("axios").AxiosResponse<any, any, {}>>;
+export interface CommunityPost {
+    id: number;
+    topic: string;
+    title: string;
+    content: string;
+    imageUrl: string | null;
+    likes: number;
+    author: string;
+    authorId: number;
+    mine: boolean;
+    liked: boolean;
+    time: string;
+}
+export interface CommunityComment {
+    id: number;
+    postId: number;
+    parentId: number | null;
+    author: string;
+    authorId: number;
+    content: string;
+    mine: boolean;
+    time: string;
+}
+export interface CommunityPostDetail {
+    id: number;
+    topic: string;
+    title: string;
+    content: string;
+    imageUrl: string | null;
+    likes: number;
+    author: string;
+    authorId: number;
+    mine: boolean;
+    liked: boolean;
+    time: string;
+    comments: CommunityComment[];
+}
+export declare function fetchCommunityPosts(): Promise<CommunityPost[]>;
+export declare function fetchCommunityPostDetail(id: number): Promise<CommunityPostDetail>;
+export declare function createCommunityPost(payload: {
+    topic: string;
+    title: string;
+    content: string;
+    imageUrl?: string | null;
+}): Promise<import("axios").AxiosResponse<any, any, {}>>;
+export declare function toggleLikePost(id: number): Promise<{
+    liked: boolean;
+    likeCount: number;
+}>;
+export declare function createCommunityComment(postId: number, payload: {
+    content: string;
+    parentCommentId?: number | null;
+}): Promise<import("axios").AxiosResponse<any, any, {}>>;
 export declare function aiChat(messages: AiChatMessage[]): Promise<AiChatResponse>;

@@ -206,6 +206,69 @@ export async function deleteMyAddress(id: number) {
   return http.delete(`/api/profile/me/addresses/${id}`)
 }
 
+export interface CommunityPost {
+  id: number
+  topic: string
+  title: string
+  content: string
+  imageUrl: string | null
+  likes: number
+  author: string
+  authorId: number
+  mine: boolean
+  liked: boolean
+  time: string
+}
+
+export interface CommunityComment {
+  id: number
+  postId: number
+  parentId: number | null
+  author: string
+  authorId: number
+  content: string
+  mine: boolean
+  time: string
+}
+
+export interface CommunityPostDetail {
+  id: number
+  topic: string
+  title: string
+  content: string
+  imageUrl: string | null
+  likes: number
+  author: string
+  authorId: number
+  mine: boolean
+  liked: boolean
+  time: string
+  comments: CommunityComment[]
+}
+
+export async function fetchCommunityPosts() {
+  const res = await http.get('/api/community/posts') as { data: CommunityPost[] }
+  return res.data
+}
+
+export async function fetchCommunityPostDetail(id: number) {
+  const res = await http.get(`/api/community/posts/${id}`) as { data: CommunityPostDetail }
+  return res.data
+}
+
+export async function createCommunityPost(payload: { topic: string; title: string; content: string; imageUrl?: string | null }) {
+  return http.post('/api/community/posts', payload)
+}
+
+export async function toggleLikePost(id: number) {
+  const res = await http.post(`/api/community/posts/${id}/like`) as { data: { liked: boolean; likeCount: number } }
+  return res.data
+}
+
+export async function createCommunityComment(postId: number, payload: { content: string; parentCommentId?: number | null }) {
+  return http.post(`/api/community/posts/${postId}/comments`, payload)
+}
+
 export async function aiChat(messages: AiChatMessage[]) {
   const res = await http.post('/api/ai/chat', { messages }) as { data: AiChatResponse }
   return res.data

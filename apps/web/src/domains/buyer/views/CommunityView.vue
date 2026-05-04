@@ -204,6 +204,7 @@ const inboxHint = computed(() => {
 
 onMounted(() => {
   loadAnnouncements()
+  communityStore.loadPosts()
   restoreScroll()
 })
 
@@ -341,21 +342,17 @@ function submitDraft() {
     : buyerTopicOptions.includes(draft.topic) ? draft.topic : '种植经验'
 
   communityStore.addPost({
-    id: Date.now(),
     topic,
     title: draft.title,
     content: draft.content,
-    time: '刚刚',
-    likes: 0,
-    mine: true,
-    author: '我',
-    imageUrl: draftImageUrl.value || undefined,
-    imageAlt: draftImageName.value || undefined
+    imageUrl: draftImageUrl.value || null
+  }).then(() => {
+    resetDraft()
+    message.value = '帖子已发布'
+    activeTab.value = 'all'
+  }).catch((err: any) => {
+    message.value = err?.response?.data?.message || '发布失败'
   })
-
-  resetDraft()
-  message.value = '帖子已发布'
-  activeTab.value = 'all'
 }
 
 function like(postId: number) {

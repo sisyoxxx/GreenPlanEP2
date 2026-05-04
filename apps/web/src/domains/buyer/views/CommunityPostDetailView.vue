@@ -54,23 +54,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '../../../layouts/AppLayout.vue'
-import PostCommentPanel from '../components/community/PostCommentPanel.vue'
+import PostCommentPanel, { type PostComment } from '../components/community/PostCommentPanel.vue'
 import { useBuyerFavoritesStore } from '../stores/useBuyerFavoritesStore'
 import { useBuyerCommunityStore, type CommunityPostItem } from '../stores/useBuyerCommunityStore'
+import { fetchCommunityPostDetail, createCommunityComment, type CommunityComment } from '../api'
 
-type PostComment = {
-  id: number
-  postId: number
-  parentId: number | null
-  author: string
-  content: string
-  time: string
-}
-
-const COMMENT_STORAGE_KEY = 'gp2_buyer_post_comments'
 const SCROLL_KEY = 'gp2_community_scroll_top'
 
 const route = useRoute()
@@ -78,20 +69,38 @@ const router = useRouter()
 const favoritesStore = useBuyerFavoritesStore()
 const communityStore = useBuyerCommunityStore()
 
-const comments = ref<PostComment[]>(loadComments())
+const comments = ref<CommunityComment[]>([])
 const liked = ref(false)
+const loading = ref(false)
 
 const postId = computed(() => Number(route.params.id))
 const post = computed(() => communityStore.getPostById(postId.value))
 const favoritePostIdSet = computed(() => favoritesStore.postIdSet)
 const postComments = computed(() => comments.value.filter((item) => item.postId === postId.value))
+
+onMounted(async () => {
+  const id = postId.value
+  if (!Number.isFinite(id)) return
+  loading.value = true
+  try {
+    const detail = await fetchCommunityPostDetail(id)
+    liked.value = detail.liked
+    comments.value = detail.comments
+  } catch {
+    // ignore
+  } finally {
+    loading.value = false
+  }
+})
+
 function goBack() {
   router.push('/community')
 }
 
-function like(id: number) {
-  communityStore.likePost(id)
-  liked.value = true
+async function like(id: number) {
+  await communityStore.likePost(id)
+  const target = communityStore.getPostById(id)
+  if (target) liked.value = target.liked ?? false
 }
 
 function toggleFavorite(item: CommunityPostItem) {
@@ -107,75 +116,18 @@ function toggleFavorite(item: CommunityPostItem) {
   })
 }
 
-function onAddComment(comment: Omit<PostComment, 'id'>) {
+async function onAddComment(comment: Omit<PostComment, 'id'>) {
   const currentPost = post.value
   if (!currentPost) return
-  comments.value.push({
-    id: Date.now() + Math.floor(Math.random() * 1000),
-    ...comment,
-    postId: currentPost.id
-  })
-  persistComments()
-}
-
-function loadComments(): PostComment[] {
-  const raw = safeParse<any[]>(localStorage.getItem(COMMENT_STORAGE_KEY), [])
-  if (!Array.isArray(raw) || raw.length === 0) return defaultComments()
-
-  const normalized = raw
-    .map((item) => normalizeComment(item))
-    .filter((item: PostComment | null): item is PostComment => !!item)
-
-  if (normalized.length === 0) return defaultComments()
-  return normalized
-}
-
-function normalizeComment(raw: any): PostComment | null {
-  const id = Number(raw?.id)
-  const postIdValue = Number(raw?.postId)
-  if (!Number.isFinite(id) || !Number.isFinite(postIdValue)) return null
-
-  const parentRaw = raw?.parentId
-  const parentId = parentRaw === null || parentRaw === undefined ? null : Number(parentRaw)
-  return {
-    id,
-    postId: postIdValue,
-    parentId: Number.isFinite(parentId) ? parentId : null,
-    author: String(raw?.author || '匿名用户'),
-    content: String(raw?.content || ''),
-    time: String(raw?.time || '')
-  }
-}
-
-function defaultComments(): PostComment[] {
-  return [
-    { id: 1, postId: 1, parentId: null, author: '阳台番茄达人', content: '先降温到 20~22°C，再补光，徒长会明显缓解。', time: '昨天' },
-    { id: 2, postId: 1, parentId: 1, author: '园艺新手A', content: '收到，我今晚就开始调整温度。', time: '昨天' },
-    { id: 3, postId: 4, parentId: null, author: '多肉观察员', content: '这盆搭配很好看，想问颗粒土品牌是哪个？', time: '2天前' }
-  ]
-}
-
-function persistComments() {
-  localStorage.setItem(COMMENT_STORAGE_KEY, JSON.stringify(comments.value))
-}
-
-function formatNow() {
-  const now = new Date()
-  return now.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  })
-}
-
-function safeParse<T>(value: string | null, fallback: T): T {
-  if (!value) return fallback
   try {
-    return JSON.parse(value) as T
-  } catch {
-    return fallback
+    await createCommunityComment(currentPost.id, {
+      content: comment.content,
+      parentCommentId: comment.parentId
+    })
+    const detail = await fetchCommunityPostDetail(currentPost.id)
+    comments.value = detail.comments
+  } catch (err: any) {
+    // ignore
   }
 }
 </script>
