@@ -293,3 +293,38 @@ export async function aiChat(messages: AiChatMessage[]) {
   const res = await http.post('/api/ai/chat', { messages }) as { data: AiChatResponse }
   return res.data
 }
+
+export interface CartItemDto {
+  productId: number
+  sku: string
+  name: string
+  description: string
+  price: number
+  category: string
+  plantingMonth: string
+  suitableRegion: string
+  imageUrl: string
+  onlineStock: number
+  quantity: number
+}
+
+export async function fetchCart() {
+  const res = await http.get('/api/cart') as { data: CartItemDto[] }
+  return res.data
+}
+
+export async function addCartItem(productId: number, quantity: number) {
+  return http.post('/api/cart/items', { productId, quantity })
+}
+
+export async function updateCartItem(productId: number, quantity: number) {
+  return http.put(`/api/cart/items/${productId}`, { quantity })
+}
+
+export async function removeCartItem(productId: number) {
+  return http.delete(`/api/cart/items/${productId}`)
+}
+
+export async function clearCart() {
+  return http.delete('/api/cart')
+}

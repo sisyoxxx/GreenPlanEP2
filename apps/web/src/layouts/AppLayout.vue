@@ -18,6 +18,8 @@ const publicHeaderRoutes = ['/', '/login', '/profile', '/favorites', '/products'
 const showHeader = computed(() =>
   publicHeaderRoutes.includes(route.path) ||
   route.path.startsWith('/products/') ||
+  route.path.startsWith('/tutorial/') ||
+  route.path.startsWith('/community/posts/') ||
   route.path.startsWith('/admin') ||
   route.path.startsWith('/inventory')
 )

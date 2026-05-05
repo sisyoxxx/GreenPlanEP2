@@ -55,7 +55,7 @@
     </div>
 
     <div class="form-actions">
-      <button :disabled="submitting" @click="$emit('submit')">{{ submitting ? '保存中...' : isEdit ? '保存修改' : '创建商品' }}</button>
+      <button :disabled="submitting" @click="$emit('submit', { ...localForm })">{{ submitting ? '保存中...' : isEdit ? '保存修改' : '创建商品' }}</button>
       <button class="secondary-btn" :disabled="submitting" @click="$emit('cancel')">取消</button>
     </div>
   </section>
@@ -86,7 +86,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'submit'): void
+  (e: 'submit', value: ProductFormData): void
   (e: 'cancel'): void
   (e: 'update:form', value: ProductFormData): void
 }>()

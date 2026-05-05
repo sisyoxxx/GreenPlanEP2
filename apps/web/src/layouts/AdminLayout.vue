@@ -31,9 +31,9 @@
               <div v-if="expandedSubmenu === item.path" class="admin-submenu">
                 <RouterLink
                   v-for="sub in item.submenu"
-                  :key="sub.path"
-                  :to="sub.path"
-                  :class="['admin-submenu-item', { active: isActive(sub.path) }]"
+                  :key="sub.label"
+                  :to="sub.to ?? sub.path"
+                  :class="['admin-submenu-item', { active: isActive(sub.path, typeof sub.to === 'object' ? sub.to.query : undefined) }]"
                 >
                   {{ sub.label }}
                 </RouterLink>
@@ -67,7 +67,21 @@ const showDropdown = ref(false)
 const expandedSubmenu = ref<string | null>(null)
 let hideTimer: ReturnType<typeof setTimeout> | null = null
 
-const navItems = [
+interface NavItem {
+  path: string
+  icon?: string
+  label: string
+  to?: string | { path: string; query?: Record<string, string> }
+  submenu?: NavSubItem[]
+}
+
+interface NavSubItem {
+  path: string
+  label: string
+  to?: string | { path: string; query?: Record<string, string> }
+}
+
+const navItems: NavItem[] = [
   { path: '/admin/profile', icon: '👤', label: '个人信息' },
   { path: '/admin/dashboard', icon: '📊', label: '工作台' },
   { path: '/admin/reports/sales', icon: '📈', label: '销量分析' },
@@ -90,15 +104,21 @@ const navItems = [
     icon: '🎆',
     label: '促销管理',
     submenu: [
-      { path: '/admin/promotions?type=home', label: '首页轮播' },
-      { path: '/admin/promotions?type=product', label: '商品页轮播' }
+      { path: '/admin/promotions', label: '首页轮播', to: { path: '/admin/promotions', query: { type: 'home' } } },
+      { path: '/admin/promotions', label: '商品页轮播', to: { path: '/admin/promotions', query: { type: 'product' } } }
     ]
   },
   { path: '/admin/community', icon: '💬', label: '社区管理' }
 ]
 
-function isActive(path: string) {
-  return route.fullPath === path || route.path === path
+function isActive(path: string, query?: Record<string, string>) {
+  if (query) {
+    const queryMatch = Object.entries(query).every(
+      ([key, value]) => route.query[key] === value
+    )
+    return route.path === path && queryMatch
+  }
+  return route.path === path
 }
 
 function toggleSubmenu(path: string) {

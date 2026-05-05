@@ -22,7 +22,8 @@ http.interceptors.response.use(
   (res) => res.data,
   (err) => {
     const status = err.response?.status
-    if (status === 401 || status === 403) {
+    // 401: 认证失效，需要重新登录
+    if (status === 401) {
       const store = useAuthStore()
       const hadToken = !!store.accessToken
       store.logout()
@@ -30,6 +31,7 @@ http.interceptors.response.use(
         window.location.assign('/login')
       }
     }
+    // 403: 权限不足，不自动登出，只抛出错误让调用方处理
     return Promise.reject(err)
   }
 )

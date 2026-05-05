@@ -23,10 +23,12 @@
           :is-edit="!!editingId"
           :submitting="submitting"
           @update:form="Object.assign(form, $event)"
+          @submit="submitProduct"
+          @cancel="cancelEdit"
         />
         <template #footer>
           <button class="secondary-btn" :disabled="submitting" @click="cancelEdit">取消</button>
-          <button :disabled="submitting" @click="submitProduct">{{ submitting ? '保存中...' : (editingId ? '保存修改' : '创建商品') }}</button>
+          <button :disabled="submitting" @click="submitProduct()">{{ submitting ? '保存中...' : (editingId ? '保存修改' : '创建商品') }}</button>
         </template>
       </BaseModal>
 
@@ -165,9 +167,14 @@ function cancelEdit() {
   showForm.value = false
 }
 
-async function submitProduct() {
+async function submitProduct(overrideForm?: typeof form) {
   message.value = ''
   error.value = ''
+
+  // 如果 ProductForm 直接传了表单数据，先同步到 form（避免 watch 异步延迟）
+  if (overrideForm) {
+    Object.assign(form, overrideForm)
+  }
 
   if (
     !form.name ||

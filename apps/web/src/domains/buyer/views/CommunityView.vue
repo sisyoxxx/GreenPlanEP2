@@ -105,7 +105,7 @@
             :posts="filteredPosts"
             :favorite-post-id-set="favoritePostIdSet"
             :comment-counts="commentCounts"
-            :show-empty="activeTab === 'favorites' && filteredPosts.length === 0"
+            :show-empty="filteredPosts.length === 0"
             :empty-text="activeTab === 'favorites' ? '暂无收藏的帖子' : '暂无内容'"
             @open-post-detail="openPostDetail"
             @like="like"

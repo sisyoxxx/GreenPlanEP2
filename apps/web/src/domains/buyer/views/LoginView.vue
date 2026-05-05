@@ -48,12 +48,13 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '../../../layouts/AppLayout.vue'
 import { useAuthStore } from '../../../core/auth/useAuthStore'
 import type { Role } from '../../../core/auth/types'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 const error = ref('')
@@ -66,6 +67,11 @@ const loginForm = reactive({ username: '', password: '' })
 const registerForm = reactive({ username: '', password: '', roleCode: 'BUYER' as Role })
 
 function goRoleHome() {
+  const redirect = route.query.redirect as string | undefined
+  if (redirect) {
+    router.push(redirect)
+    return
+  }
   if (auth.role === 'ADMIN') router.push('/admin/dashboard')
   else if (auth.role === 'INVENTORY_MANAGER') router.push('/inventory/dashboard')
   else router.push('/profile')
