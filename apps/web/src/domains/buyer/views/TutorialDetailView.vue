@@ -119,34 +119,37 @@ onMounted(loadDetail)
 <style scoped>
 .tutorial-detail-shell {
   display: grid;
-  gap: 14px;
+  gap: 18px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 20px;
 }
 
 .state-card,
 .hero,
 .detail-content {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
 .media-block {
   display: grid;
-  gap: 10px;
+  gap: 14px;
 }
 
 .media-subtitle {
   margin: 0;
   font-size: 14px;
   color: #374151;
+  font-weight: 600;
 }
 
 .media-block img,
 .media-block video {
   width: 100%;
-  max-width: 680px;
   border-radius: 14px;
   border: 1px solid #e5efe7;
-  max-height: 380px;
+  max-height: 420px;
   object-fit: cover;
 }
 
@@ -154,26 +157,29 @@ onMounted(loadDetail)
   color: #fff;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 20px;
+  padding: 32px;
 }
 
 .hero-tag {
   display: inline-flex;
   width: fit-content;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.22);
+  padding: 5px 12px;
   font-size: 12px;
   font-weight: 700;
 }
 
 .hero h1 {
   margin: 0;
+  font-size: 28px;
+  line-height: 1.3;
 }
 
 .hero p {
   margin: 0;
-  line-height: 1.7;
+  line-height: 1.75;
+  opacity: 0.95;
 }
 
 .hero-meta {
@@ -196,6 +202,10 @@ onMounted(loadDetail)
   flex-wrap: wrap;
 }
 
+.detail-content {
+  padding: 32px;
+}
+
 .detail-content h2,
 .detail-content h3,
 .detail-content p,
@@ -203,16 +213,27 @@ onMounted(loadDetail)
   margin: 0;
 }
 
+.detail-content h2 {
+  font-size: 22px;
+  color: #1f2937;
+}
+
+.detail-content h3 {
+  font-size: 16px;
+  color: #374151;
+  margin-top: 4px;
+}
+
 .detail-content p,
 .detail-content li {
-  line-height: 1.8;
+  line-height: 1.85;
   color: #4b5563;
 }
 
 .detail-content ol {
   padding-left: 20px;
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .secondary-btn {
