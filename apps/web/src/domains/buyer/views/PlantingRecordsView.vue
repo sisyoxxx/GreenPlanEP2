@@ -48,13 +48,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, reactive } from 'vue'
+import { computed, ref, reactive, onMounted } from 'vue'
 import AppLayout from '../../../layouts/AppLayout.vue'
 import DiarySidebar from '../components/planting/DiarySidebar.vue'
 import DiaryForm from '../components/planting/DiaryForm.vue'
 import WeatherPanel from '../components/planting/WeatherPanel.vue'
 import DiaryTimeline from '../components/planting/DiaryTimeline.vue'
 import type { PlantRecord } from '../components/planting/types'
+import { fetchPlantingDiaries } from '../api'
 
 const diaryNotices = [
   '薄荷生长旺盛期，建议本周修剪顶部促进分枝',
@@ -72,13 +73,16 @@ const editingId = ref<number | null>(null)
 
 const newRecord = reactive({ title: '', plantName: '', category: 'seedling', note: '', date: new Date().toISOString().slice(0, 10), imageName: '' })
 
-const records = ref<PlantRecord[]>([
-  { id: 1, title: '番茄育苗第7天', plantName: '番茄', category: 'seedling', date: '2026-04-10', note: '已出芽，保持通风和散射光。叶片颜色健康，根系开始扎稳。', imageName: '番茄芽苗.jpg' },
-  { id: 2, title: '月季播种第3天', plantName: '月季', category: 'seedling', date: '2026-04-11', note: '土壤湿润度正常，等待发芽。覆膜保温效果不错。', imageName: '' },
-  { id: 3, title: '薄荷长势旺盛', plantName: '薄荷', category: 'growing', date: '2026-04-08', note: '已经长到15cm，需要修剪顶部促进分枝。香味浓郁。', imageName: '薄荷近照.jpg' },
-  { id: 4, title: '草莓第一次结果', plantName: '草莓', category: 'harvest', date: '2026-04-05', note: '阳台草莓终于红了！虽然个头不大但味道很甜，成就感满满。', imageName: '草莓成熟.jpg' },
-  { id: 5, title: '今日浇水记录', plantName: '综合', category: 'note', date: '2026-04-11', note: '全部植物浇透水，检查了排水孔，薄荷盆底略有积水需注意。', imageName: '' }
-])
+const records = ref<PlantRecord[]>([])
+
+onMounted(async () => {
+  try {
+    const data = await fetchPlantingDiaries()
+    records.value = data as PlantRecord[]
+  } catch (e) {
+    console.error('加载种植日记失败', e)
+  }
+})
 
 let nextId = 6
 function addRecord() {

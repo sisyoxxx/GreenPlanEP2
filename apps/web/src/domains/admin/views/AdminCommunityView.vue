@@ -2,8 +2,23 @@
   <AdminLayout>
     <div class="admin-community-shell">
       <main class="admin-community-main">
-        <div class="community-search">
-          <input v-model.trim="keyword" type="text" placeholder="搜索帖子、作者或内容" />
+        <div class="community-search-bar">
+          <div class="community-search">
+            <input v-model.trim="keyword" type="text" placeholder="搜索帖子、作者或内容" />
+          </div>
+          <button class="compose-toggle" @click="showCompose = !showCompose">
+            {{ showCompose ? '取消' : '发布官方活动' }}
+          </button>
+        </div>
+
+        <div v-if="showCompose" class="compose-form page-lite">
+          <h4>发布官方活动</h4>
+          <input v-model.trim="composeForm.title" type="text" placeholder="标题" />
+          <textarea v-model.trim="composeForm.content" placeholder="内容" rows="4" />
+          <input v-model.trim="composeForm.imageUrl" type="text" placeholder="图片链接（可选）" />
+          <div class="compose-actions">
+            <button class="submit-btn" @click="submitPost">发布</button>
+          </div>
         </div>
 
         <section v-if="filteredPosts.length > 0" class="post-list">
@@ -52,14 +67,37 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import AdminLayout from '../../../layouts/AdminLayout.vue'
 import CommunityPostDetailPanel from '../../buyer/components/community/CommunityPostDetailPanel.vue'
 import { useBuyerFavoritesStore } from '../../buyer/stores/useBuyerFavoritesStore'
 import { useBuyerCommunityStore, type CommunityPostItem } from '../../buyer/stores/useBuyerCommunityStore'
+import { createCommunityPost } from '../../buyer/api'
 
 const keyword = ref('')
 const selectedPostId = ref<number | null>(null)
+const showCompose = ref(false)
+const composeForm = reactive({ title: '', content: '', imageUrl: '' })
+
+async function submitPost() {
+  if (!composeForm.title || !composeForm.content) return
+  try {
+    await createCommunityPost({
+      topic: '官方活动',
+      title: composeForm.title,
+      content: composeForm.content,
+      imageUrl: composeForm.imageUrl || null
+    })
+    composeForm.title = ''
+    composeForm.content = ''
+    composeForm.imageUrl = ''
+    showCompose.value = false
+    communityStore.loadPosts()
+  } catch (e) {
+    console.error('发布失败', e)
+    alert('发布失败，请检查内容后重试')
+  }
+}
 
 const favoritesStore = useBuyerFavoritesStore()
 const communityStore = useBuyerCommunityStore()
@@ -152,7 +190,14 @@ function safeParse<T>(value: string | null, fallback: T): T {
   padding-right: 4px;
 }
 
+.community-search-bar {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
 .community-search {
+  flex: 1;
   background: #fff;
   border-radius: 12px;
   border: 1px solid #e6f0e8;
@@ -165,6 +210,71 @@ function safeParse<T>(value: string | null, fallback: T): T {
   background: transparent;
   padding: 0;
   outline: none;
+}
+
+.compose-toggle {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid #1f7a41;
+  background: #1f7a41;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.compose-toggle:hover {
+  background: #276749;
+}
+
+.compose-form {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.compose-form h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #1f2937;
+}
+
+.compose-form input,
+.compose-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #d3d7de;
+  background: #f8fcf8;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.compose-form textarea {
+  resize: vertical;
+}
+
+.compose-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.submit-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #1f7a41;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.submit-btn:hover {
+  background: #276749;
 }
 
 .post-list {

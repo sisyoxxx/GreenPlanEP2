@@ -308,6 +308,30 @@ export interface CartItemDto {
   quantity: number
 }
 
+export interface PlantingDiaryItem {
+  id: number
+  userId: number
+  title: string
+  plantName: string
+  category: string
+  diaryDate: string
+  note: string
+  imageName: string
+}
+
+export async function fetchPlantingDiaries() {
+  const res = await http.get('/api/planting-diaries') as { data: PlantingDiaryItem[] }
+  return res.data.map(d => ({
+    id: d.id,
+    title: d.title,
+    plantName: d.plantName,
+    category: d.category,
+    date: d.diaryDate,
+    note: d.note,
+    imageName: d.imageName
+  }))
+}
+
 export async function fetchCart() {
   const res = await http.get('/api/cart') as { data: CartItemDto[] }
   return res.data
