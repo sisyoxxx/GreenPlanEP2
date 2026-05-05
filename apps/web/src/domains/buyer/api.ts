@@ -17,21 +17,6 @@ export interface Product {
   sales: number
 }
 
-export interface CartItemDto {
-  id: number
-  productId: number
-  sku: string
-  name: string
-  description: string
-  price: number
-  category: string
-  plantingMonth: string
-  suitableRegion: string
-  imageUrl: string | null
-  onlineStock: number
-  quantity: number
-}
-
 export interface TutorialItem {
   id: number
   displayArea: 'HOT' | 'LIST'
@@ -307,27 +292,4 @@ export async function createCommunityComment(postId: number, payload: { content:
 export async function aiChat(messages: AiChatMessage[]) {
   const res = await http.post('/api/ai/chat', { messages }) as { data: AiChatResponse }
   return res.data
-}
-
-export async function fetchCart() {
-  const res = await http.get('/api/cart') as { data: CartItemDto[] }
-  return res.data
-}
-
-export async function addCartItem(payload: { productId: number; quantity: number }) {
-  const res = await http.post('/api/cart/items', payload) as { data: CartItemDto }
-  return res.data
-}
-
-export async function updateCartItem(productId: number, payload: { quantity: number }) {
-  const res = await http.put(`/api/cart/items/${productId}`, payload) as { data: CartItemDto }
-  return res.data
-}
-
-export async function removeCartItem(productId: number) {
-  return http.delete(`/api/cart/items/${productId}`)
-}
-
-export async function clearCart() {
-  return http.delete('/api/cart')
 }

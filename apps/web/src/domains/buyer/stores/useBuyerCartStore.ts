@@ -33,7 +33,7 @@ function toCartItem(dto: CartItemDto): BuyerCartItem {
     category: dto.category,
     plantingMonth: dto.plantingMonth,
     suitableRegion: dto.suitableRegion,
-    imageUrl: dto.imageUrl || '',
+    imageUrl: dto.imageUrl,
     onlineStock: dto.onlineStock,
     quantity: dto.quantity
   }
@@ -87,9 +87,9 @@ export const useBuyerCartStore = defineStore('buyer-cart', {
           1,
           Math.min(existed.quantity + safeQuantity, Math.max(1, product.onlineStock || 1))
         )
-        await updateCartItem(product.id, { quantity: newQty })
+        await updateCartItem(product.id, newQty)
       } else {
-        await addCartItem({ productId: product.id, quantity: Math.min(safeQuantity, Math.max(1, product.onlineStock || 1)) })
+        await addCartItem(product.id, Math.min(safeQuantity, Math.max(1, product.onlineStock || 1)))
       }
       await this.loadCart()
     },
@@ -98,7 +98,7 @@ export const useBuyerCartStore = defineStore('buyer-cart', {
       if (!item) return
 
       const safeQuantity = Math.max(1, Math.min(Number(quantity) || 1, Math.max(1, item.onlineStock || 1)))
-      await updateCartItem(productId, { quantity: safeQuantity })
+      await updateCartItem(productId, safeQuantity)
       await this.loadCart()
     },
     async increase(productId: number) {
