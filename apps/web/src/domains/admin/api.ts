@@ -338,3 +338,27 @@ export async function updateMyProfile(payload: Partial<Pick<StaffProfile, 'usern
   const res = await http.put('/api/profile/me', payload) as { data: StaffProfile }
   return res.data
 }
+
+export interface AdminCommunityPost {
+  id: number
+  topic: string
+  title: string
+  content: string
+  imageUrl: string | null
+  likes: number
+  author: string
+  authorId: number
+  auditStatus: string
+  auditMessage: string | null
+  time: string
+}
+
+export async function fetchAdminCommunityPosts() {
+  const res = await http.get('/api/community/posts/admin') as { data: AdminCommunityPost[] }
+  return res.data
+}
+
+export async function auditCommunityPost(id: number, payload: { auditStatus: string; auditMessage?: string | null }) {
+  const res = await http.post(`/api/community/posts/${id}/audit`, payload) as { data: AdminCommunityPost }
+  return res.data
+}

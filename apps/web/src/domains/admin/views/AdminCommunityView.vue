@@ -2,7 +2,7 @@
   <AdminLayout>
     <div class="admin-community-shell">
       <main class="admin-community-main">
-        <div class="community-search page-lite">
+        <div class="community-search">
           <input v-model.trim="keyword" type="text" placeholder="搜索帖子、作者或内容" />
         </div>
 
@@ -24,7 +24,7 @@
             <h3>{{ post.title }}</h3>
             <p>{{ post.content }}</p>
             <div class="row">
-              <button class="action-btn" @click.stop="like(post.id)">
+              <button class="action-btn" :class="{ active: post.liked }" @click.stop="like(post.id)">
                 <span>👍</span> {{ post.likes }}
               </button>
               <button
@@ -40,6 +40,7 @@
             </div>
           </article>
         </section>
+        <div v-else-if="communityStore.loading" class="page-lite muted">帖子加载中...</div>
         <div v-else class="page-lite muted">暂无帖子</div>
       </main>
 
@@ -51,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AdminLayout from '../../../layouts/AdminLayout.vue'
 import CommunityPostDetailPanel from '../../buyer/components/community/CommunityPostDetailPanel.vue'
 import { useBuyerFavoritesStore } from '../../buyer/stores/useBuyerFavoritesStore'
@@ -78,9 +79,13 @@ const commentCounts = computed(() => {
   return counts
 })
 
+onMounted(() => {
+  communityStore.loadPosts()
+})
+
 const filteredPosts = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
-  let list = [...communityStore.posts]
+  let list = communityStore.posts.filter((post) => post.auditStatus === 'approved')
   if (kw) {
     list = list.filter((post) =>
       [post.title, post.content, post.author, post.topic].some((text) => text.toLowerCase().includes(kw))
@@ -101,8 +106,8 @@ function like(postId: number) {
   communityStore.likePost(postId)
 }
 
-function toggleFavorite(post: CommunityPostItem) {
-  favoritesStore.togglePost({
+async function toggleFavorite(post: CommunityPostItem) {
+  await favoritesStore.togglePost({
     id: post.id,
     topic: post.topic,
     title: post.title,
@@ -147,8 +152,19 @@ function safeParse<T>(value: string | null, fallback: T): T {
   padding-right: 4px;
 }
 
+.community-search {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e6f0e8;
+  padding: 10px 12px;
+}
+
 .community-search input {
   width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  outline: none;
 }
 
 .post-list {

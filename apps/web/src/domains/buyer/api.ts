@@ -217,6 +217,7 @@ export interface CommunityPost {
   authorId: number
   mine: boolean
   liked: boolean
+  favorited: boolean
   time: string
 }
 
@@ -242,6 +243,7 @@ export interface CommunityPostDetail {
   authorId: number
   mine: boolean
   liked: boolean
+  favorited: boolean
   time: string
   comments: CommunityComment[]
 }
@@ -265,45 +267,18 @@ export async function toggleLikePost(id: number) {
   return res.data
 }
 
+export async function toggleFavoritePost(id: number) {
+  const res = await http.post(`/api/community/posts/${id}/favorite`) as { data: { favorited: boolean } }
+  return res.data
+}
+
+export async function fetchFavoritePostIds() {
+  const res = await http.get('/api/community/posts/favorites') as { data: number[] }
+  return res.data
+}
+
 export async function createCommunityComment(postId: number, payload: { content: string; parentCommentId?: number | null }) {
   return http.post(`/api/community/posts/${postId}/comments`, payload)
-}
-
-export interface CartItemDto {
-  productId: number
-  sku: string
-  name: string
-  description: string
-  price: number
-  category: string
-  plantingMonth: string
-  suitableRegion: string
-  imageUrl: string
-  onlineStock: number
-  quantity: number
-}
-
-export async function fetchCart() {
-  const res = await http.get('/api/cart') as { data: CartItemDto[] }
-  return res.data
-}
-
-export async function addCartItem(productId: number, quantity: number) {
-  const res = await http.post('/api/cart/items', { productId, quantity }) as { data: CartItemDto }
-  return res.data
-}
-
-export async function updateCartItem(productId: number, quantity: number) {
-  const res = await http.put(`/api/cart/items/${productId}`, { quantity }) as { data: CartItemDto }
-  return res.data
-}
-
-export async function removeCartItem(productId: number) {
-  return http.delete(`/api/cart/items/${productId}`)
-}
-
-export async function clearCart() {
-  return http.delete('/api/cart')
 }
 
 export async function aiChat(messages: AiChatMessage[]) {

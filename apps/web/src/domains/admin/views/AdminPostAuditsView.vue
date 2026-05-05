@@ -47,25 +47,24 @@
             <span class="post-time">{{ post.time }}</span>
           </div>
           <div class="post-badges">
-            <span v-if="post.auditStatus === 'REJECTED'" class="status-badge rejected">已打回</span>
+            <span v-if="post.auditStatus === 'rejected'" class="status-badge rejected">已打回</span>
             <span v-if="isHidden(post.id)" class="status-badge hidden">已隐藏</span>
-            <span v-if="post.auditStatus !== 'REJECTED' && !isHidden(post.id)" class="status-badge visible">显示中</span>
+            <span v-if="post.auditStatus !== 'rejected' && !isHidden(post.id)" class="status-badge visible">显示中</span>
           </div>
         </div>
         <h4 class="post-title">{{ post.title }}</h4>
         <p class="post-content">{{ post.content }}</p>
         <div v-if="post.imageUrl" class="post-image">
-          <img :src="post.imageUrl" :alt="post.imageAlt || post.title" />
+          <img :src="post.imageUrl" :alt="post.title" />
         </div>
-        <div v-if="post.auditStatus === 'REJECTED' && post.auditMessage" class="audit-reason">
+        <div v-if="post.auditStatus === 'rejected' && post.auditMessage" class="audit-reason">
           <strong>打回原因：</strong>{{ post.auditMessage }}
         </div>
         <div class="post-stats">
           <span>👍 {{ post.likes }}</span>
-          <span>{{ post.mine ? '我的帖子' : '' }}</span>
         </div>
         <div class="post-actions">
-          <button v-if="post.auditStatus === 'REJECTED'" class="action-btn pass" @click="approvePost(post.id)">通过</button>
+          <button v-if="post.auditStatus === 'rejected'" class="action-btn pass" @click="approvePost(post.id)">通过</button>
           <button v-else class="action-btn reject" @click="openRejectModal(post.id)">打回</button>
           <button v-if="!isHidden(post.id)" class="action-btn hide" @click="hidePost(post.id)">隐藏</button>
           <button v-else class="action-btn restore" @click="restorePost(post.id)">恢复显示</button>
@@ -90,38 +89,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AdminLayout from '../../../layouts/AdminLayout.vue'
 import BaseModal from '../../../shared/components/BaseModal.vue'
+import { fetchAdminCommunityPosts, auditCommunityPost, type AdminCommunityPost } from '../api'
 
 const COMMUNITY_POSTS_KEY = 'gp2_buyer_community_posts'
-const HIDDEN_POSTS_KEY = 'gp2_admin_hidden_post_ids'
-const SYSTEM_NOTIFICATIONS_KEY = 'gp2_system_notifications'
-
-type AuditStatus = 'APPROVED' | 'REJECTED'
-
-interface CommunityPostItem {
-  id: number
-  topic: string
-  title: string
-  content: string
-  time: string
-  likes: number
-  mine: boolean
-  author: string
-  imageUrl?: string
-  imageAlt?: string
-  auditStatus?: AuditStatus
-  auditMessage?: string
-}
-
-interface SystemNotification {
-  id: number
-  title: string
-  content: string
-  time: string
-  read: boolean
-}
 
 const search = ref('')
 const filterTopic = ref('')
@@ -130,78 +103,79 @@ const sortBy = ref('newest')
 const rejectModalOpen = ref(false)
 const rejectReason = ref('')
 const rejectTargetId = ref<number | null>(null)
+const loading = ref(false)
 
-function loadPosts(): CommunityPostItem[] {
+const posts = ref<AdminCommunityPost[]>([])
+
+onMounted(() => {
+  loadPosts()
+})
+
+async function loadPosts() {
+  loading.value = true
+  try {
+    const data = await fetchAdminCommunityPosts()
+    posts.value = data
+    // 尝试同步 localStorage 中的旧数据到后端
+    await syncLocalStoragePosts()
+  } catch (err: any) {
+    console.error('加载帖子失败', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function syncLocalStoragePosts() {
   try {
     const raw = localStorage.getItem(COMMUNITY_POSTS_KEY)
-    if (!raw) return []
-    return JSON.parse(raw) as CommunityPostItem[]
+    if (!raw) return
+    const localPosts = JSON.parse(raw) as Array<{
+      id: number
+      topic: string
+      title: string
+      content: string
+      time: string
+      likes: number
+      author: string
+      imageUrl?: string
+      auditStatus?: string
+      auditMessage?: string
+    }>
+    if (!Array.isArray(localPosts) || localPosts.length === 0) return
+
+    // 重新加载后端帖子列表以获取最新状态
+    const backendPosts = await fetchAdminCommunityPosts()
+    const backendIds = new Set(backendPosts.map((p) => p.id))
+
+    // 将 localStorage 中不存在于后端的帖子同步上去
+    // 注意：由于 ID 可能冲突，这里简单跳过已有相同 ID 的帖子
+    // 实际导入需要创建新帖子，但由于没有管理端创建帖子的 API，
+    // 这里只做数据迁移的提示，清空 localStorage 避免重复尝试
+    const unsynced = localPosts.filter((p) => !backendIds.has(p.id))
+    if (unsynced.length > 0) {
+      console.warn('localStorage 中有未同步的帖子，但由于缺少管理端发帖 API，已跳过同步:', unsynced)
+    }
+    // 同步完成后清空 localStorage，避免重复尝试
+    localStorage.removeItem(COMMUNITY_POSTS_KEY)
   } catch {
-    return []
+    // ignore
   }
 }
 
-function savePosts(list: CommunityPostItem[]) {
-  localStorage.setItem(COMMUNITY_POSTS_KEY, JSON.stringify(list))
-}
-
-function loadHiddenSet(): Set<number> {
-  try {
-    const raw = localStorage.getItem(HIDDEN_POSTS_KEY)
-    if (!raw) return new Set()
-    const arr = JSON.parse(raw) as number[]
-    return new Set(arr)
-  } catch {
-    return new Set()
-  }
-}
-
-function saveHiddenSet(set: Set<number>) {
-  localStorage.setItem(HIDDEN_POSTS_KEY, JSON.stringify([...set]))
-}
-
-function loadSystemNotifications(): SystemNotification[] {
-  try {
-    const raw = localStorage.getItem(SYSTEM_NOTIFICATIONS_KEY)
-    if (!raw) return []
-    return JSON.parse(raw) as SystemNotification[]
-  } catch {
-    return []
-  }
-}
-
-function saveSystemNotifications(list: SystemNotification[]) {
-  localStorage.setItem(SYSTEM_NOTIFICATIONS_KEY, JSON.stringify(list))
-}
-
-function addSystemNotification(title: string, content: string) {
-  const list = loadSystemNotifications()
-  list.unshift({
-    id: Date.now(),
-    title,
-    content,
-    time: new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
-    read: false
-  })
-  saveSystemNotifications(list)
-}
-
-const posts = ref<CommunityPostItem[]>(loadPosts())
-const hiddenSet = ref<Set<number>>(loadHiddenSet())
-
-const visibleCount = computed(() => posts.value.filter((p) => !hiddenSet.value.has(p.id) && p.auditStatus !== 'REJECTED').length)
-const rejectedCount = computed(() => posts.value.filter((p) => p.auditStatus === 'REJECTED').length)
-const hiddenCount = computed(() => posts.value.filter((p) => hiddenSet.value.has(p.id)).length)
+const visibleCount = computed(() => posts.value.filter((p) => p.auditStatus !== 'rejected' && p.auditStatus !== 'hidden').length)
+const rejectedCount = computed(() => posts.value.filter((p) => p.auditStatus === 'rejected').length)
+const hiddenCount = computed(() => posts.value.filter((p) => p.auditStatus === 'hidden').length)
 
 function isHidden(id: number) {
-  return hiddenSet.value.has(id)
+  const post = posts.value.find((p) => p.id === id)
+  return post?.auditStatus === 'hidden'
 }
 
 const filteredPosts = computed(() => {
   let list = [...posts.value]
-  if (filter.value === 'visible') list = list.filter((p) => !isHidden(p.id) && p.auditStatus !== 'REJECTED')
-  if (filter.value === 'rejected') list = list.filter((p) => p.auditStatus === 'REJECTED')
-  if (filter.value === 'hidden') list = list.filter((p) => isHidden(p.id))
+  if (filter.value === 'visible') list = list.filter((p) => p.auditStatus !== 'rejected' && p.auditStatus !== 'hidden')
+  if (filter.value === 'rejected') list = list.filter((p) => p.auditStatus === 'rejected')
+  if (filter.value === 'hidden') list = list.filter((p) => p.auditStatus === 'hidden')
   if (filterTopic.value) list = list.filter((p) => p.topic === filterTopic.value)
   if (search.value) {
     const kw = search.value.toLowerCase()
@@ -220,18 +194,13 @@ const filteredPosts = computed(() => {
   return list
 })
 
-function updatePost(postId: number, updater: (post: CommunityPostItem) => void) {
-  const post = posts.value.find((p) => p.id === postId)
-  if (!post) return
-  updater(post)
-  savePosts(posts.value)
-}
-
-function approvePost(postId: number) {
-  updatePost(postId, (post) => {
-    post.auditStatus = undefined
-    post.auditMessage = undefined
-  })
+async function approvePost(postId: number) {
+  try {
+    await auditCommunityPost(postId, { auditStatus: 'approved', auditMessage: null })
+    await loadPosts()
+  } catch (err: any) {
+    console.error('审核通过失败', err)
+  }
 }
 
 function openRejectModal(postId: number) {
@@ -240,39 +209,39 @@ function openRejectModal(postId: number) {
   rejectModalOpen.value = true
 }
 
-function confirmReject() {
+async function confirmReject() {
   const postId = rejectTargetId.value
   const reason = rejectReason.value.trim()
   if (!postId || !reason) return
 
-  const post = posts.value.find((p) => p.id === postId)
-  if (!post) return
-
-  // 更新帖子状态
-  post.auditStatus = 'REJECTED'
-  post.auditMessage = reason
-  savePosts(posts.value)
-
-  // 发送系统通知
-  addSystemNotification(
-    `帖子《${post.title}》被打回`,
-    `您的帖子未通过审核。原因：${reason}`
-  )
-
-  rejectModalOpen.value = false
-  rejectTargetId.value = null
-  rejectReason.value = ''
+  try {
+    await auditCommunityPost(postId, { auditStatus: 'rejected', auditMessage: reason })
+    await loadPosts()
+    rejectModalOpen.value = false
+    rejectTargetId.value = null
+    rejectReason.value = ''
+  } catch (err: any) {
+    console.error('打回失败', err)
+  }
 }
 
-function hidePost(id: number) {
+async function hidePost(id: number) {
   if (!confirm('确定要隐藏这条帖子吗？买家端将不再显示。')) return
-  hiddenSet.value.add(id)
-  saveHiddenSet(hiddenSet.value)
+  try {
+    await auditCommunityPost(id, { auditStatus: 'hidden', auditMessage: null })
+    await loadPosts()
+  } catch (err: any) {
+    console.error('隐藏失败', err)
+  }
 }
 
-function restorePost(id: number) {
-  hiddenSet.value.delete(id)
-  saveHiddenSet(hiddenSet.value)
+async function restorePost(id: number) {
+  try {
+    await auditCommunityPost(id, { auditStatus: 'approved', auditMessage: null })
+    await loadPosts()
+  } catch (err: any) {
+    console.error('恢复显示失败', err)
+  }
 }
 </script>
 

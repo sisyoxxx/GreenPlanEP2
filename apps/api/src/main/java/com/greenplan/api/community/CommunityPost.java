@@ -35,6 +35,12 @@ public class CommunityPost {
     @Column(name = "like_count", nullable = false)
     private Integer likeCount = 0;
 
+    @Column(name = "audit_status", nullable = false, length = 16)
+    private String auditStatus = "approved";
+
+    @Column(name = "audit_message", columnDefinition = "TEXT")
+    private String auditMessage;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

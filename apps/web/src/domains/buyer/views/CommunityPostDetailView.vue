@@ -86,28 +86,17 @@ onMounted(async () => {
     const detail = await fetchCommunityPostDetail(id)
     liked.value = detail.liked
     comments.value = detail.comments
-    // Fallback: 如果后端评论为空，尝试从 localStorage 读取旧数据
-    if (comments.value.length === 0) {
-      try {
-        const raw = localStorage.getItem('gp2_buyer_post_comments')
-        if (raw) {
-          const legacy = JSON.parse(raw) as any[]
-          comments.value = legacy
-            .filter((item) => Number(item?.postId) === id)
-            .map((item) => ({
-              id: Number(item.id) || Date.now() + Math.random(),
-              postId: id,
-              parentId: item.parentId ? Number(item.parentId) : null,
-              author: String(item.author || '匿名'),
-              authorId: 0,
-              content: String(item.content || ''),
-              mine: false,
-              time: String(item.time || '')
-            }))
-        }
-      } catch {
-        // ignore localStorage parse errors
-      }
+    if (detail.favorited && post.value) {
+      favoritesStore.togglePost({
+        id: post.value.id,
+        topic: post.value.topic,
+        title: post.value.title,
+        content: post.value.content,
+        time: post.value.time,
+        author: post.value.author,
+        imageUrl: post.value.imageUrl,
+        imageAlt: post.value.imageAlt
+      })
     }
   } catch {
     // ignore
@@ -126,8 +115,8 @@ async function like(id: number) {
   if (target) liked.value = target.liked ?? false
 }
 
-function toggleFavorite(item: CommunityPostItem) {
-  favoritesStore.togglePost({
+async function toggleFavorite(item: CommunityPostItem) {
+  await favoritesStore.togglePost({
     id: item.id,
     topic: item.topic,
     title: item.title,

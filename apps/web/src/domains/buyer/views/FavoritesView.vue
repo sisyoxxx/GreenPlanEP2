@@ -123,6 +123,7 @@ const isAllEmpty = computed(() => favorites.tutorialIds.length === 0 && favorite
 
 onMounted(() => {
   reloadTutorials()
+  favorites.loadFavoritePostsFromServer()
 })
 
 function formatDuration(durationMinutes: number | null) {

@@ -5,6 +5,7 @@ import {
   fetchCommunityPostDetail,
   createCommunityPost,
   toggleLikePost,
+  toggleFavoritePost,
   createCommunityComment,
   type CommunityPost,
   type CommunityComment
@@ -24,6 +25,7 @@ export interface CommunityPostItem {
   imageUrl?: string
   imageAlt?: string
   liked?: boolean
+  favorited?: boolean
   auditStatus?: 'pending' | 'approved' | 'rejected'
   auditMessage?: string
 }
@@ -45,6 +47,7 @@ function normalizePost(raw: any): CommunityPostItem | null {
     likes: Number.isFinite(Number(raw?.likes)) ? Number(raw.likes) : 0,
     mine: Boolean(raw?.mine),
     liked: Boolean(raw?.liked),
+    favorited: Boolean(raw?.favorited),
     author: String(raw?.author || ''),
     imageUrl: raw?.imageUrl ? String(raw.imageUrl) : undefined,
     imageAlt: raw?.imageAlt ? String(raw.imageAlt) : undefined,
@@ -66,18 +69,6 @@ export const useBuyerCommunityStore = defineStore('buyer-community', () => {
     try {
       const data = await fetchCommunityPosts()
       posts.value = data.map(normalizePost).filter((x): x is CommunityPostItem => !!x)
-      // Fallback: 如果后端为空，尝试从 localStorage 读取旧数据
-      if (posts.value.length === 0) {
-        try {
-          const raw = localStorage.getItem('gp2_buyer_community_posts')
-          if (raw) {
-            const legacy = JSON.parse(raw) as any[]
-            posts.value = legacy.map(normalizePost).filter((x): x is CommunityPostItem => !!x)
-          }
-        } catch {
-          // ignore localStorage parse errors
-        }
-      }
     } catch (err: any) {
       error.value = err?.response?.data?.message || '加载社区帖子失败'
     } finally {
@@ -100,8 +91,22 @@ export const useBuyerCommunityStore = defineStore('buyer-community', () => {
         target.likes = result.likeCount
         target.liked = result.liked
       }
-    } catch {
-      // ignore
+    } catch (err: any) {
+      console.error('点赞失败', err)
+    }
+  }
+
+  async function favoritePost(postId: number) {
+    const safeId = Number(postId)
+    if (!Number.isFinite(safeId)) return
+    try {
+      const result = await toggleFavoritePost(safeId)
+      const target = posts.value.find((p) => p.id === safeId)
+      if (target) {
+        target.favorited = result.favorited
+      }
+    } catch (err: any) {
+      console.error('收藏失败', err)
     }
   }
 
@@ -132,7 +137,8 @@ export const useBuyerCommunityStore = defineStore('buyer-community', () => {
     addPost,
     likePost,
     getPostById,
-    setAuditStatus
+    setAuditStatus,
+    favoritePost
   }
 })
 

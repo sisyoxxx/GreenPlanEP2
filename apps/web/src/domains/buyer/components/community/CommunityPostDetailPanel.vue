@@ -19,7 +19,9 @@
       <article class="content">{{ post.content }}</article>
 
       <div class="actions">
-        <button class="secondary-btn" @click="like(post.id)">点赞 {{ post.likes }}</button>
+        <button class="secondary-btn" :class="{ active: post.liked }" @click="like(post.id)">
+          {{ post.liked ? '已点赞' : '点赞' }} {{ post.likes }}
+        </button>
         <button class="secondary-btn" :class="{ active: favoritePostIdSet.has(post.id) }" @click="toggleFavorite(post)">
           {{ favoritePostIdSet.has(post.id) ? '已收藏' : '收藏' }}
         </button>
@@ -42,7 +44,8 @@
           <button class="secondary-btn" :disabled="!commentDraft" @click="submitComment">发布评论</button>
         </div>
 
-        <div v-if="rootComments.length === 0" class="muted">还没有评论，来发布第一条吧。</div>
+        <div v-if="loadingComments" class="muted">加载评论中...</div>
+        <div v-else-if="rootComments.length === 0" class="muted">还没有评论，来发布第一条吧。</div>
 
         <div v-else class="comment-list">
           <article v-for="comment in rootComments" :key="comment.id" class="comment-item">
@@ -77,9 +80,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useBuyerFavoritesStore } from '../../stores/useBuyerFavoritesStore'
 import { useBuyerCommunityStore, type CommunityPostItem } from '../../stores/useBuyerCommunityStore'
+import { fetchCommunityPostDetail, createCommunityComment, type CommunityComment } from '../../api'
 
 type PostComment = {
   id: number
@@ -90,8 +94,6 @@ type PostComment = {
   time: string
 }
 
-const COMMENT_STORAGE_KEY = 'gp2_buyer_post_comments'
-
 const props = defineProps<{ postId: number }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
@@ -99,8 +101,9 @@ const favoritesStore = useBuyerFavoritesStore()
 const communityStore = useBuyerCommunityStore()
 
 const commentDraft = ref('')
-const comments = ref<PostComment[]>(loadComments())
+const comments = ref<PostComment[]>([])
 const replyTarget = ref<PostComment | null>(null)
+const loadingComments = ref(false)
 
 const post = computed(() => communityStore.getPostById(props.postId))
 const favoritePostIdSet = computed(() => favoritesStore.postIdSet)
@@ -110,7 +113,33 @@ const rootComments = computed(() => postComments.value.filter((item) => item.par
 watch(() => props.postId, () => {
   replyTarget.value = null
   commentDraft.value = ''
+  loadComments()
 })
+
+onMounted(() => {
+  loadComments()
+})
+
+async function loadComments() {
+  const id = props.postId
+  if (!Number.isFinite(id)) return
+  loadingComments.value = true
+  try {
+    const detail = await fetchCommunityPostDetail(id)
+    comments.value = (detail.comments || []).map((c: CommunityComment) => ({
+      id: c.id,
+      postId: c.postId,
+      parentId: c.parentId,
+      author: c.author,
+      content: c.content,
+      time: c.time
+    }))
+  } catch {
+    comments.value = []
+  } finally {
+    loadingComments.value = false
+  }
+}
 
 function emitClose() {
   emit('close')
@@ -133,23 +162,22 @@ function toggleFavorite(item: CommunityPostItem) {
   })
 }
 
-function submitComment() {
+async function submitComment() {
   const currentPost = post.value
   const content = commentDraft.value.trim()
   if (!currentPost || !content) return
 
-  comments.value.push({
-    id: Date.now() + Math.floor(Math.random() * 1000),
-    postId: currentPost.id,
-    parentId: replyTarget.value?.id ?? null,
-    author: '我',
-    content,
-    time: formatNow()
-  })
-
-  persistComments()
-  commentDraft.value = ''
-  replyTarget.value = null
+  try {
+    await createCommunityComment(currentPost.id, {
+      content,
+      parentCommentId: replyTarget.value?.id ?? null
+    })
+    await loadComments()
+    commentDraft.value = ''
+    replyTarget.value = null
+  } catch (err: any) {
+    console.error('评论发布失败', err)
+  }
 }
 
 function startReply(comment: PostComment) {
@@ -162,67 +190,6 @@ function cancelReply() {
 
 function getReplies(commentId: number) {
   return postComments.value.filter((item) => item.parentId === commentId)
-}
-
-function loadComments(): PostComment[] {
-  const raw = safeParse<any[]>(localStorage.getItem(COMMENT_STORAGE_KEY), [])
-  if (!Array.isArray(raw) || raw.length === 0) return defaultComments()
-
-  const normalized = raw
-    .map((item) => normalizeComment(item))
-    .filter((item: PostComment | null): item is PostComment => !!item)
-
-  if (normalized.length === 0) return defaultComments()
-  return normalized
-}
-
-function normalizeComment(raw: any): PostComment | null {
-  const id = Number(raw?.id)
-  const postIdValue = Number(raw?.postId)
-  if (!Number.isFinite(id) || !Number.isFinite(postIdValue)) return null
-
-  const parentRaw = raw?.parentId
-  const parentId = parentRaw === null || parentRaw === undefined ? null : Number(parentRaw)
-  return {
-    id,
-    postId: postIdValue,
-    parentId: Number.isFinite(parentId) ? parentId : null,
-    author: String(raw?.author || '匿名用户'),
-    content: String(raw?.content || ''),
-    time: String(raw?.time || '')
-  }
-}
-
-function defaultComments(): PostComment[] {
-  return [
-    { id: 1, postId: 1, parentId: null, author: '阳台番茄达人', content: '先降温到 20~22°C，再补光，徒长会明显缓解。', time: '昨天' },
-    { id: 2, postId: 1, parentId: 1, author: '园艺新手A', content: '收到，我今晚就开始调整温度。', time: '昨天' },
-    { id: 3, postId: 4, parentId: null, author: '多肉观察员', content: '这盆搭配很好看，想问颗粒土品牌是哪个？', time: '2天前' }
-  ]
-}
-
-function persistComments() {
-  localStorage.setItem(COMMENT_STORAGE_KEY, JSON.stringify(comments.value))
-}
-
-function formatNow() {
-  const now = new Date()
-  return now.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  })
-}
-
-function safeParse<T>(value: string | null, fallback: T): T {
-  if (!value) return fallback
-  try {
-    return JSON.parse(value) as T
-  } catch {
-    return fallback
-  }
 }
 </script>
 

@@ -12,6 +12,7 @@ export interface CommunityPostItem {
     imageUrl?: string;
     imageAlt?: string;
     liked?: boolean;
+    favorited?: boolean;
     auditStatus?: 'pending' | 'approved' | 'rejected';
     auditMessage?: string;
 }
@@ -28,6 +29,7 @@ export declare const useBuyerCommunityStore: import("pinia").StoreDefinition<"bu
         imageUrl?: string | undefined;
         imageAlt?: string | undefined;
         liked?: boolean | undefined;
+        favorited?: boolean | undefined;
         auditStatus?: "pending" | "approved" | "rejected" | undefined;
         auditMessage?: string | undefined;
     }[], CommunityPostItem[] | {
@@ -42,6 +44,7 @@ export declare const useBuyerCommunityStore: import("pinia").StoreDefinition<"bu
         imageUrl?: string | undefined;
         imageAlt?: string | undefined;
         liked?: boolean | undefined;
+        favorited?: boolean | undefined;
         auditStatus?: "pending" | "approved" | "rejected" | undefined;
         auditMessage?: string | undefined;
     }[]>;
@@ -57,6 +60,7 @@ export declare const useBuyerCommunityStore: import("pinia").StoreDefinition<"bu
     likePost: (postId: number) => Promise<void>;
     getPostById: (postId: number) => CommunityPostItem | null;
     setAuditStatus: (postId: number, status: "pending" | "approved" | "rejected", message?: string) => void;
+    favoritePost: (postId: number) => Promise<void>;
 }, "posts" | "loading" | "error">, Pick<{
     posts: import("vue").Ref<{
         id: number;
@@ -70,6 +74,7 @@ export declare const useBuyerCommunityStore: import("pinia").StoreDefinition<"bu
         imageUrl?: string | undefined;
         imageAlt?: string | undefined;
         liked?: boolean | undefined;
+        favorited?: boolean | undefined;
         auditStatus?: "pending" | "approved" | "rejected" | undefined;
         auditMessage?: string | undefined;
     }[], CommunityPostItem[] | {
@@ -84,6 +89,7 @@ export declare const useBuyerCommunityStore: import("pinia").StoreDefinition<"bu
         imageUrl?: string | undefined;
         imageAlt?: string | undefined;
         liked?: boolean | undefined;
+        favorited?: boolean | undefined;
         auditStatus?: "pending" | "approved" | "rejected" | undefined;
         auditMessage?: string | undefined;
     }[]>;
@@ -99,6 +105,7 @@ export declare const useBuyerCommunityStore: import("pinia").StoreDefinition<"bu
     likePost: (postId: number) => Promise<void>;
     getPostById: (postId: number) => CommunityPostItem | null;
     setAuditStatus: (postId: number, status: "pending" | "approved" | "rejected", message?: string) => void;
+    favoritePost: (postId: number) => Promise<void>;
 }, never>, Pick<{
     posts: import("vue").Ref<{
         id: number;
@@ -112,6 +119,7 @@ export declare const useBuyerCommunityStore: import("pinia").StoreDefinition<"bu
         imageUrl?: string | undefined;
         imageAlt?: string | undefined;
         liked?: boolean | undefined;
+        favorited?: boolean | undefined;
         auditStatus?: "pending" | "approved" | "rejected" | undefined;
         auditMessage?: string | undefined;
     }[], CommunityPostItem[] | {
@@ -126,6 +134,7 @@ export declare const useBuyerCommunityStore: import("pinia").StoreDefinition<"bu
         imageUrl?: string | undefined;
         imageAlt?: string | undefined;
         liked?: boolean | undefined;
+        favorited?: boolean | undefined;
         auditStatus?: "pending" | "approved" | "rejected" | undefined;
         auditMessage?: string | undefined;
     }[]>;
@@ -141,5 +150,6 @@ export declare const useBuyerCommunityStore: import("pinia").StoreDefinition<"bu
     likePost: (postId: number) => Promise<void>;
     getPostById: (postId: number) => CommunityPostItem | null;
     setAuditStatus: (postId: number, status: "pending" | "approved" | "rejected", message?: string) => void;
-}, "loadPosts" | "addPost" | "likePost" | "getPostById" | "setAuditStatus">>;
+    favoritePost: (postId: number) => Promise<void>;
+}, "loadPosts" | "addPost" | "likePost" | "getPostById" | "setAuditStatus" | "favoritePost">>;
 export type { CommunityPost, CommunityComment };

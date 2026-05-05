@@ -94,7 +94,6 @@ const navItems = [
       { path: '/admin/promotions?type=product', label: '商品页轮播' }
     ]
   },
-  { path: '/admin/promotion-posts', icon: '📰', label: '推广文章' },
   { path: '/admin/community', icon: '💬', label: '社区管理' }
 ]
 

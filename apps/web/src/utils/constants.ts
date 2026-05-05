@@ -7,6 +7,7 @@ export const ORDER_STATUS_MAP: Record<string, string> = {
 
 export const SHIPPING_STATUS_MAP: Record<string, string> = {
   PENDING: '待发货',
+  SHIPPED: '已发货',
   IN_TRANSIT: '运输中',
   DELIVERED: '已送达',
 }

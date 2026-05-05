@@ -40,9 +40,10 @@ export declare const useBuyerFavoritesStore: import("pinia").StoreDefinition<"bu
         }[];
     } & import("pinia").PiniaCustomStateProperties<FavoritesState>) => Set<number>;
 }, {
+    loadFavoritePostsFromServer(): Promise<void>;
     seedTutorialFavoritesIfEmpty(ids: number[]): void;
     toggleTutorial(id: number): void;
-    togglePost(post: FavoritePostSnapshot): void;
+    togglePost(post: FavoritePostSnapshot): Promise<void>;
     removePost(id: number): void;
     clearAll(): void;
 }>;

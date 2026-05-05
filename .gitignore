@@ -27,3 +27,4 @@ apps/web/src/**/*.vue.d.ts
 # OS
 .DS_Store
 Thumbs.db
+ngrok.err

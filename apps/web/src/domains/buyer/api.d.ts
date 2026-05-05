@@ -147,6 +147,7 @@ export interface CommunityPost {
     authorId: number;
     mine: boolean;
     liked: boolean;
+    favorited: boolean;
     time: string;
 }
 export interface CommunityComment {
@@ -170,6 +171,7 @@ export interface CommunityPostDetail {
     authorId: number;
     mine: boolean;
     liked: boolean;
+    favorited: boolean;
     time: string;
     comments: CommunityComment[];
 }
@@ -185,26 +187,12 @@ export declare function toggleLikePost(id: number): Promise<{
     liked: boolean;
     likeCount: number;
 }>;
+export declare function toggleFavoritePost(id: number): Promise<{
+    favorited: boolean;
+}>;
+export declare function fetchFavoritePostIds(): Promise<number[]>;
 export declare function createCommunityComment(postId: number, payload: {
     content: string;
     parentCommentId?: number | null;
 }): Promise<import("axios").AxiosResponse<any, any, {}>>;
-export interface CartItemDto {
-    productId: number;
-    sku: string;
-    name: string;
-    description: string;
-    price: number;
-    category: string;
-    plantingMonth: string;
-    suitableRegion: string;
-    imageUrl: string;
-    onlineStock: number;
-    quantity: number;
-}
-export declare function fetchCart(): Promise<CartItemDto[]>;
-export declare function addCartItem(productId: number, quantity: number): Promise<CartItemDto>;
-export declare function updateCartItem(productId: number, quantity: number): Promise<CartItemDto>;
-export declare function removeCartItem(productId: number): Promise<import("axios").AxiosResponse<any, any, {}>>;
-export declare function clearCart(): Promise<import("axios").AxiosResponse<any, any, {}>>;
 export declare function aiChat(messages: AiChatMessage[]): Promise<AiChatResponse>;

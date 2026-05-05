@@ -17,7 +17,7 @@
       <h3>{{ post.title }}</h3>
       <p>{{ post.content }}</p>
       <div class="row">
-        <button class="action-btn" @click.stop="$emit('like', post.id)">
+        <button class="action-btn" :class="{ active: post.liked }" @click.stop="$emit('like', post.id)">
           <span>👍</span> {{ post.likes }}
         </button>
         <button

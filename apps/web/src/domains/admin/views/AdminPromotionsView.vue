@@ -62,7 +62,10 @@
               </td>
               <td class="cell-time">{{ formatDateTime(item.createdAt) }}</td>
               <td>
-                <button class="secondary-btn" @click="startEdit(item)">编辑</button>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button class="secondary-btn" @click="startEdit(item)">编辑</button>
+                  <button class="danger-btn" @click="confirmDelete(item)">删除</button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -76,7 +79,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AdminLayout from '../../../layouts/AdminLayout.vue'
-import { createPromotion, fetchPromotions, updatePromotion, type AdminPromotion } from '../api'
+import { createPromotion, deletePromotion, fetchPromotions, updatePromotion, type AdminPromotion } from '../api'
 
 const route = useRoute()
 
@@ -151,6 +154,17 @@ async function submitPromotion() {
     message.value = err?.response?.data?.message || (editingId.value ? '促销位更新失败' : '促销位创建失败')
   } finally {
     submitting.value = false
+  }
+}
+
+async function confirmDelete(item: AdminPromotion) {
+  if (!confirm(`确定要删除促销位「${item.title}」吗？`)) return
+  try {
+    await deletePromotion(item.id)
+    message.value = '促销位已删除'
+    await loadPromotions()
+  } catch (err: any) {
+    message.value = err?.response?.data?.message || '删除失败'
   }
 }
 
@@ -309,5 +323,11 @@ function formatDateTime(value: string | null) {
   background: #f2f6f2;
   border: 1px solid #e3e8e3;
   color: #1f2937;
+}
+
+.danger-btn {
+  border-color: #f2cbcb;
+  color: #b42318;
+  background: #fff7f7;
 }
 </style>

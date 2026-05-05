@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { fetchFavoritePostIds, toggleFavoritePost } from '../api'
 
 const STORAGE_KEY = 'gp2_buyer_favorites'
 
@@ -44,6 +45,15 @@ export const useBuyerFavoritesStore = defineStore('buyer-favorites', {
     postIdSet: (state) => new Set(state.posts.map((p) => p.id))
   },
   actions: {
+    async loadFavoritePostsFromServer() {
+      try {
+        const ids = await fetchFavoritePostIds()
+        const idSet = new Set(ids.map((x) => Number(x)).filter((x) => Number.isFinite(x)))
+        this.posts = this.posts.filter((p) => idSet.has(p.id))
+      } catch {
+        // 保留本地数据作为 fallback
+      }
+    },
     seedTutorialFavoritesIfEmpty(ids: number[]) {
       if (this.tutorialIds.length > 0) return
       const unique = Array.from(new Set((ids || []).map((x) => Number(x)).filter((x) => Number.isFinite(x))))
@@ -59,28 +69,35 @@ export const useBuyerFavoritesStore = defineStore('buyer-favorites', {
       this.tutorialIds = Array.from(set)
       persist({ tutorialIds: this.tutorialIds, posts: this.posts })
     },
-    togglePost(post: FavoritePostSnapshot) {
+    async togglePost(post: FavoritePostSnapshot) {
       const safeId = Number(post?.id)
       if (!Number.isFinite(safeId)) return
-      const existed = this.posts.find((p) => p.id === safeId)
-      if (existed) {
-        this.posts = this.posts.filter((p) => p.id !== safeId)
-      } else {
-        this.posts = [
-          {
-            id: safeId,
-            topic: String(post.topic || ''),
-            title: String(post.title || ''),
-            content: String(post.content || ''),
-            time: String(post.time || ''),
-            author: String(post.author || ''),
-            imageUrl: post.imageUrl,
-            imageAlt: post.imageAlt
-          },
-          ...this.posts
-        ]
+      try {
+        const result = await toggleFavoritePost(safeId)
+        if (!result.favorited) {
+          this.posts = this.posts.filter((p) => p.id !== safeId)
+        } else {
+          const existed = this.posts.find((p) => p.id === safeId)
+          if (!existed) {
+            this.posts = [
+              {
+                id: safeId,
+                topic: String(post.topic || ''),
+                title: String(post.title || ''),
+                content: String(post.content || ''),
+                time: String(post.time || ''),
+                author: String(post.author || ''),
+                imageUrl: post.imageUrl,
+                imageAlt: post.imageAlt
+              },
+              ...this.posts
+            ]
+          }
+        }
+        persist({ tutorialIds: this.tutorialIds, posts: this.posts })
+      } catch (err: any) {
+        console.error('收藏同步失败', err)
       }
-      persist({ tutorialIds: this.tutorialIds, posts: this.posts })
     },
     removePost(id: number) {
       const safeId = Number(id)

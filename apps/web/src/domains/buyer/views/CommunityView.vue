@@ -205,6 +205,7 @@ const inboxHint = computed(() => {
 onMounted(() => {
   loadAnnouncements()
   communityStore.loadPosts()
+  favoritesStore.loadFavoritePostsFromServer()
   restoreScroll()
 })
 

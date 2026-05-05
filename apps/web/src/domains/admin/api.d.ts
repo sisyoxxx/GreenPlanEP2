@@ -237,3 +237,21 @@ export declare function fetchAdminOrders(): Promise<AdminOrderListItem[]>;
 export declare function fetchAdminOrderDetail(orderId: number): Promise<AdminOrderDetail>;
 export declare function fetchMyProfile(): Promise<StaffProfile>;
 export declare function updateMyProfile(payload: Partial<Pick<StaffProfile, 'username' | 'gender' | 'phone' | 'avatarDataUrl'>>): Promise<StaffProfile>;
+export interface AdminCommunityPost {
+    id: number;
+    topic: string;
+    title: string;
+    content: string;
+    imageUrl: string | null;
+    likes: number;
+    author: string;
+    authorId: number;
+    auditStatus: string;
+    auditMessage: string | null;
+    time: string;
+}
+export declare function fetchAdminCommunityPosts(): Promise<AdminCommunityPost[]>;
+export declare function auditCommunityPost(id: number, payload: {
+    auditStatus: string;
+    auditMessage?: string | null;
+}): Promise<AdminCommunityPost>;

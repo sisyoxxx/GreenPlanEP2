@@ -29,7 +29,6 @@ const routes = [
   { path: '/admin/audit/posts', component: () => import('../domains/admin/views/AdminPostAuditsView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
   { path: '/admin/audit/reports', component: () => import('../domains/admin/views/AdminReportAuditsView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
   { path: '/admin/promotions', component: () => import('../domains/admin/views/AdminPromotionsView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
-  { path: '/admin/promotion-posts', component: () => import('../domains/admin/views/AdminPromotionPostsView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
   { path: '/admin/community', component: () => import('../domains/admin/views/AdminCommunityView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
   { path: '/admin/profile', component: () => import('../domains/admin/views/AdminProfileView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
 
