@@ -21,6 +21,7 @@
     </div>
 
     <button class="nav-item" :class="{ active: activeTab === 'my' }" @click="$emit('setTab', 'my')">我的帖子</button>
+    <button class="nav-item" :class="{ active: activeTab === 'favorites' }" @click="$emit('setTab', 'favorites')">我的收藏</button>
     <button class="nav-item" :class="{ active: activeTab === 'inbox' }" @click="$emit('setTab', 'inbox')">私信中心</button>
 
     <div class="sidebar-messages">
@@ -59,6 +60,8 @@ defineEmits<{
   (e: 'selectTopic', topic: TopicCategory): void
   (e: 'openInbox', type: string): void
 }>()
+
+// No additional logic needed
 </script>
 
 <style scoped>

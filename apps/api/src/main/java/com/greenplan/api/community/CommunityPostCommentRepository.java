@@ -8,4 +8,6 @@ import java.util.List;
 @Repository
 public interface CommunityPostCommentRepository extends JpaRepository<CommunityPostComment, Long> {
     List<CommunityPostComment> findByPostIdOrderByCreatedAtAsc(Long postId);
+
+    void deleteByPostId(Long postId);
 }

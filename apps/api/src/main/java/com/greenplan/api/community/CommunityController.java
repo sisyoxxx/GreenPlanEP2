@@ -103,6 +103,25 @@ public class CommunityController {
         return ApiResponse.ok(postIds);
     }
 
+    @PutMapping("/posts/{postId}")
+    public ApiResponse<Map<String, Object>> updatePost(
+            @PathVariable Long postId,
+            @Valid @RequestBody CreatePostRequest request,
+            Authentication authentication) {
+        JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
+        CommunityPost post = communityService.updatePost(postId, request, principal);
+        return ApiResponse.ok("帖子已更新", toPostDto(post, principal.getId()));
+    }
+
+    @DeleteMapping("/posts/{postId}")
+    public ApiResponse<Void> deletePost(
+            @PathVariable Long postId,
+            Authentication authentication) {
+        JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
+        communityService.deletePost(postId, principal);
+        return ApiResponse.ok("帖子已删除", null);
+    }
+
     @PostMapping("/posts/{postId}/comments")
     public ApiResponse<Map<String, Object>> createComment(
             @PathVariable Long postId,

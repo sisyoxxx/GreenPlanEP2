@@ -66,6 +66,33 @@ public class CommunityService {
     }
 
     @Transactional
+    public CommunityPost updatePost(Long postId, CreatePostRequest request, JwtUserPrincipal principal) {
+        CommunityPost post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("帖子不存在"));
+        if (!principal.getId().equals(post.getAuthorId())) {
+            throw new IllegalArgumentException("无权编辑他人帖子");
+        }
+        post.setTopic(request.topic());
+        post.setTitle(request.title());
+        post.setContent(request.content());
+        post.setImageUrl(request.imageUrl());
+        return postRepository.save(post);
+    }
+
+    @Transactional
+    public void deletePost(Long postId, JwtUserPrincipal principal) {
+        CommunityPost post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("帖子不存在"));
+        if (!principal.getId().equals(post.getAuthorId())) {
+            throw new IllegalArgumentException("无权删除他人帖子");
+        }
+        commentRepository.deleteByPostId(postId);
+        likeRepository.deleteByPostId(postId);
+        favoriteRepository.deleteByPostId(postId);
+        postRepository.delete(post);
+    }
+
+    @Transactional
     public boolean toggleLike(Long postId, JwtUserPrincipal principal) {
         CommunityPost post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("帖子不存在"));

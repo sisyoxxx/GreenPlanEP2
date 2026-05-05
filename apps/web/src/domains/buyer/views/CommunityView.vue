@@ -62,15 +62,51 @@
             @update-chat-draft="chatDraft = $event"
           />
 
-          <div v-if="activeTab === 'my' && filteredPosts.length === 0" class="page-lite muted">暂无内容</div>
+          <div v-if="(activeTab === 'my' || activeTab === 'favorites') && filteredPosts.length === 0" class="page-lite muted">
+            {{ activeTab === 'my' ? '暂无我的帖子' : '暂无收藏的帖子' }}
+          </div>
 
+          <!-- 我的帖子：列表形式，带编辑/删除 -->
+          <section v-if="activeTab === 'my' && filteredPosts.length > 0" class="my-post-list">
+            <article v-for="post in filteredPosts" :key="post.id" class="my-post-item page-lite">
+              <div class="my-post-main" @click="openPostDetail(post.id)">
+                <div class="my-post-head">
+                  <span class="tag">{{ post.topic }}</span>
+                  <span class="muted">{{ post.time }}</span>
+                </div>
+                <h4>{{ post.title }}</h4>
+                <p class="my-post-excerpt">{{ post.content.slice(0, 120) }}{{ post.content.length > 120 ? '...' : '' }}</p>
+              </div>
+              <div class="my-post-actions">
+                <button class="secondary-btn" @click.stop="startEdit(post)">编辑</button>
+                <button class="danger-btn" @click.stop="confirmDelete(post)">删除</button>
+              </div>
+            </article>
+          </section>
+
+          <!-- 编辑面板 -->
+          <section v-if="editingPostId !== null" class="page-lite compose-panel">
+            <h3>编辑帖子</h3>
+            <select v-model="editDraft.topic">
+              <option v-for="topic in buyerTopicOptions" :key="topic" :value="topic">{{ topic }}</option>
+            </select>
+            <input v-model.trim="editDraft.title" placeholder="标题" />
+            <textarea v-model.trim="editDraft.content" rows="5" placeholder="内容"></textarea>
+            <div class="row">
+              <button class="secondary-btn" @click="cancelEdit">取消</button>
+              <button @click="submitEdit">保存</button>
+            </div>
+            <p v-if="message" class="message">{{ message }}</p>
+          </section>
+
+          <!-- 我的收藏/全部：瀑布流 -->
           <CommunityPostList
-            v-if="activeTab !== 'inbox'"
+            v-if="activeTab !== 'inbox' && activeTab !== 'my'"
             :posts="filteredPosts"
             :favorite-post-id-set="favoritePostIdSet"
             :comment-counts="commentCounts"
-            :show-empty="activeTab === 'my' && filteredPosts.length === 0"
-            empty-text="暂无内容"
+            :show-empty="activeTab === 'favorites' && filteredPosts.length === 0"
+            :empty-text="activeTab === 'favorites' ? '暂无收藏的帖子' : '暂无内容'"
             @open-post-detail="openPostDetail"
             @like="like"
             @toggle-favorite="toggleFavorite"
@@ -90,7 +126,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import AppLayout from '../../../layouts/AppLayout.vue'
-import { fetchAnnouncements, type AnnouncementItem } from '../api'
+import { fetchAnnouncements, updateCommunityPost, deleteCommunityPost, type AnnouncementItem } from '../api'
 import { useAuthStore } from '../../../core/auth/useAuthStore'
 import { useBuyerFavoritesStore } from '../stores/useBuyerFavoritesStore'
 import { useBuyerCommunityStore, type CommunityPostItem, type TopicCategory } from '../stores/useBuyerCommunityStore'
@@ -100,7 +136,7 @@ import CommunityInboxPanel from '../components/community/CommunityInboxPanel.vue
 import CommunityAnnouncementBar from '../components/community/CommunityAnnouncementBar.vue'
 import CommunityPostList from '../components/community/CommunityPostList.vue'
 
-type Tab = 'all' | 'my' | 'inbox' | 'compose'
+type Tab = 'all' | 'my' | 'favorites' | 'inbox' | 'compose'
 type InboxType = 'message' | 'reply' | 'like'
 type InboxItem = { id: number; text: string; time: string }
 type ChatSender = 'me' | 'other'
@@ -174,9 +210,16 @@ const commentCounts = computed(() => {
   return counts
 })
 
+const editingPostId = ref<number | null>(null)
+const editDraft = reactive({ topic: '种植经验' as TopicCategory, title: '', content: '', imageUrl: '' })
+
 const filteredPosts = computed(() => {
   let list = [...communityStore.posts]
   if (activeTab.value === 'my') list = list.filter((post) => post.mine)
+  if (activeTab.value === 'favorites') {
+    const favSet = favoritesStore.postIdSet
+    list = list.filter((post) => favSet.has(post.id))
+  }
   if (selectedTopic.value) list = list.filter((post) => post.topic === selectedTopic.value)
 
   const kw = rightKeyword.value.trim().toLowerCase()
@@ -396,6 +439,54 @@ function closePostDetail() {
   selectedPostId.value = null
 }
 
+function startEdit(post: CommunityPostItem) {
+  editingPostId.value = post.id
+  editDraft.topic = post.topic
+  editDraft.title = post.title
+  editDraft.content = post.content
+  editDraft.imageUrl = post.imageUrl || ''
+  message.value = ''
+}
+
+function cancelEdit() {
+  editingPostId.value = null
+  editDraft.title = ''
+  editDraft.content = ''
+  editDraft.imageUrl = ''
+}
+
+async function submitEdit() {
+  if (!editDraft.title || !editDraft.content) {
+    message.value = '请填写标题和内容'
+    return
+  }
+  if (!editingPostId.value) return
+  try {
+    await updateCommunityPost(editingPostId.value, {
+      topic: editDraft.topic,
+      title: editDraft.title,
+      content: editDraft.content,
+      imageUrl: editDraft.imageUrl || null
+    })
+    await communityStore.loadPosts()
+    editingPostId.value = null
+    message.value = '帖子已更新'
+  } catch (err: any) {
+    message.value = err?.response?.data?.message || '更新失败'
+  }
+}
+
+async function confirmDelete(post: CommunityPostItem) {
+  if (!confirm(`确定要删除帖子「${post.title}」吗？`)) return
+  try {
+    await deleteCommunityPost(post.id)
+    await communityStore.loadPosts()
+    message.value = '帖子已删除'
+  } catch (err: any) {
+    message.value = err?.response?.data?.message || '删除失败'
+  }
+}
+
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
@@ -598,6 +689,71 @@ function safeParse<T>(value: string | null, fallback: T): T {
   border-color: #9ad3aa;
   background: #edf9ef;
   color: #1f7a41;
+}
+
+.my-post-list {
+  display: grid;
+  gap: 10px;
+}
+
+.my-post-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.my-post-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(21, 56, 35, 0.08);
+}
+
+.my-post-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.my-post-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.my-post-main h4 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: #1f2937;
+}
+
+.my-post-excerpt {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.my-post-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.danger-btn {
+  border-color: #f2cbcb;
+  color: #b42318;
+  background: #fff7f7;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #f2cbcb;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 @media (max-width: 1280px) {

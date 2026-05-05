@@ -262,6 +262,14 @@ export async function createCommunityPost(payload: { topic: string; title: strin
   return http.post('/api/community/posts', payload)
 }
 
+export async function updateCommunityPost(id: number, payload: { topic: string; title: string; content: string; imageUrl?: string | null }) {
+  return http.put(`/api/community/posts/${id}`, payload)
+}
+
+export async function deleteCommunityPost(id: number) {
+  return http.delete(`/api/community/posts/${id}`)
+}
+
 export async function toggleLikePost(id: number) {
   const res = await http.post(`/api/community/posts/${id}/like`) as { data: { liked: boolean; likeCount: number } }
   return res.data
