@@ -154,8 +154,8 @@ onMounted(async () => {
 })
 
 function ensureBuyer(actionText: string) {
-  if (!auth.isLoggedIn || auth.role !== 'BUYER') {
-    message.value = `${actionText}前请先登录买家账户。`
+  if (!auth.isLoggedIn) {
+    message.value = `${actionText}前请先登录。`
     router.push('/login')
     return false
   }
@@ -197,8 +197,14 @@ async function confirmPay() {
 async function addToCart() {
   if (!product.value) return
   if (!ensureBuyer('加入购物车')) return
-  await cartStore.addItem(product.value, payQuantity.value)
-  message.value = `${product.value.name} 已加入购物车。`
+  try {
+    await cartStore.addItem(product.value, payQuantity.value)
+    message.value = `${product.value.name} 已加入购物车。`
+  } catch (err: any) {
+    const msg = err?.response?.data?.message || '加入购物车失败，请检查网络或登录状态'
+    message.value = msg
+    alert(msg)
+  }
 }
 
 function formatRate(rate: number | null | undefined) {

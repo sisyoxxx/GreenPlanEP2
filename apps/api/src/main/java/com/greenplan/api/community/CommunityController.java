@@ -77,8 +77,11 @@ public class CommunityController {
     public ApiResponse<Map<String, Object>> toggleLike(
             @PathVariable Long postId,
             Authentication authentication) {
-        JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-        boolean liked = communityService.toggleLike(postId, principal);
+        Long userId = extractUserId(authentication);
+        if (userId == null) {
+            throw new IllegalArgumentException("请先登录");
+        }
+        boolean liked = communityService.toggleLike(postId, userId);
         Map<String, Object> result = new HashMap<>();
         result.put("liked", liked);
         result.put("likeCount", communityService.getPost(postId).getLikeCount());

@@ -82,16 +82,22 @@ export const useBuyerCartStore = defineStore('buyer-cart', {
       const safeQuantity = Math.max(1, Number(quantity) || 1)
       const existed = this.items.find((item) => item.id === product.id)
 
-      if (existed) {
-        const newQty = Math.max(
-          1,
-          Math.min(existed.quantity + safeQuantity, Math.max(1, product.onlineStock || 1))
-        )
-        await updateCartItem(product.id, newQty)
-      } else {
-        await addCartItem(product.id, Math.min(safeQuantity, Math.max(1, product.onlineStock || 1)))
+      try {
+        if (existed) {
+          const newQty = Math.max(
+            1,
+            Math.min(existed.quantity + safeQuantity, Math.max(1, product.onlineStock || 1))
+          )
+          await updateCartItem(product.id, newQty)
+        } else {
+          await addCartItem(product.id, Math.min(safeQuantity, Math.max(1, product.onlineStock || 1)))
+        }
+        await this.loadCart()
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || '购物车操作失败'
+        alert(msg)
+        throw err
       }
-      await this.loadCart()
     },
     async setQuantity(productId: number, quantity: number) {
       const item = this.items.find((entry) => entry.id === productId)

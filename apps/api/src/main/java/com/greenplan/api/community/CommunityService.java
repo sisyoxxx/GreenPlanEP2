@@ -93,20 +93,20 @@ public class CommunityService {
     }
 
     @Transactional
-    public boolean toggleLike(Long postId, JwtUserPrincipal principal) {
+    public boolean toggleLike(Long postId, Long userId) {
         CommunityPost post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("帖子不存在"));
-        boolean alreadyLiked = likeRepository.existsByPostIdAndUserId(postId, principal.getId());
+        boolean alreadyLiked = likeRepository.existsByPostIdAndUserId(postId, userId);
         int currentLikeCount = post.getLikeCount() == null ? 0 : post.getLikeCount();
         if (alreadyLiked) {
-            likeRepository.deleteByPostIdAndUserId(postId, principal.getId());
+            likeRepository.deleteByPostIdAndUserId(postId, userId);
             post.setLikeCount(Math.max(0, currentLikeCount - 1));
             postRepository.save(post);
             return false;
         } else {
             PostLike like = new PostLike();
             like.setPostId(postId);
-            like.setUserId(principal.getId());
+            like.setUserId(userId);
             likeRepository.save(like);
             post.setLikeCount(currentLikeCount + 1);
             postRepository.save(post);

@@ -254,8 +254,8 @@ function goDetail(id: number) {
 }
 
 function requireBuyerLogin(actionText: string) {
-  if (!auth.isLoggedIn || auth.role !== 'BUYER') {
-    message.value = `${actionText}前请先登录买家账号。`
+  if (!auth.isLoggedIn) {
+    message.value = `${actionText}前请先登录。`
     router.push('/login')
     return false
   }
@@ -264,8 +264,14 @@ function requireBuyerLogin(actionText: string) {
 
 async function addToCart(item: Product) {
   if (!requireBuyerLogin('加入购物车')) return
-  await cartStore.addItem(item, 1)
-  message.value = `${item.name} 已加入购物车。`
+  try {
+    await cartStore.addItem(item, 1)
+    message.value = `${item.name} 已加入购物车。`
+  } catch (err: any) {
+    const msg = err?.response?.data?.message || '加入购物车失败，请检查网络或登录状态'
+    message.value = msg
+    alert(msg)
+  }
 }
 
 async function buyNow(item: Product) {
@@ -279,7 +285,9 @@ async function buyNow(item: Product) {
     await reload()
     router.push(`/orders?focus=${res.data.id}`)
   } catch (err: any) {
-    message.value = err?.response?.data?.message || '下单失败'
+    const msg = err?.response?.data?.message || '下单失败'
+    message.value = msg
+    alert(msg)
   }
 }
 

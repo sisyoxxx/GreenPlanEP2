@@ -356,13 +356,19 @@ function goCart() {
 }
 
 async function addToCart(item: Product) {
-  if (!auth.isLoggedIn || auth.role !== 'BUYER') {
-    message.value = '加入购物车前请先登录买家账户。'
+  if (!auth.isLoggedIn) {
+    message.value = '加入购物车前请先登录。'
     router.push('/login')
     return
   }
-  await cartStore.addItem(item, 1)
-  message.value = `${item.name} 已加入购物车。`
+  try {
+    await cartStore.addItem(item, 1)
+    message.value = `${item.name} 已加入购物车。`
+  } catch (err: any) {
+    const msg = err?.response?.data?.message || '加入购物车失败，请检查网络或登录状态'
+    message.value = msg
+    alert(msg)
+  }
 }
 </script>
 
