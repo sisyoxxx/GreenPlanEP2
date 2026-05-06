@@ -1,5 +1,5 @@
 <template>
-  <div v-if="show" class="diary-form page-lite">
+  <div v-if="show" class="diary-form">
     <h3 class="form-title">{{ editingId ? '编辑日记' : '新增日记' }}</h3>
     <div class="form-layout">
       <div class="form-fields">
@@ -20,7 +20,9 @@
       </div>
       <div class="upload-area" @click="triggerUpload">
         <input ref="fileInput" type="file" accept="image/*" hidden @change="onFileChange" />
-        <span v-if="!modelValue.imageName">📷 点击上传图片</span>
+        <span v-if="uploading">⏳ 上传中...</span>
+        <span v-else-if="!modelValue.imageName">📷 点击上传图片</span>
+        <img v-else-if="modelValue.imageName.startsWith('http') || modelValue.imageName.startsWith('/api/')" :src="modelValue.imageName" class="preview-img" />
         <span v-else>🖼️ {{ modelValue.imageName }}</span>
       </div>
     </div>
@@ -29,6 +31,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { uploadPlantingDiaryImage } from '../../api'
 
 interface DiaryFormData {
   title: string
@@ -52,15 +55,25 @@ const emit = defineEmits<{
 }>()
 
 const fileInput = ref<HTMLInputElement | null>(null)
+const uploading = ref(false)
 
 function triggerUpload() {
   fileInput.value?.click()
 }
 
-function onFileChange(e: Event) {
+async function onFileChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
-  if (file) {
-    emit('update:modelValue', { ...props.modelValue, imageName: file.name })
+  if (!file) return
+  uploading.value = true
+  try {
+    const url = await uploadPlantingDiaryImage(file)
+    emit('update:modelValue', { ...props.modelValue, imageName: url })
+  } catch (err) {
+    console.error('上传失败', err)
+    alert('图片上传失败')
+  } finally {
+    uploading.value = false
+    if (fileInput.value) fileInput.value.value = ''
   }
 }
 
@@ -72,7 +85,7 @@ function updateField(key: keyof DiaryFormData, event: Event) {
 
 <style scoped>
 .diary-form {
-  padding: 20px 24px;
+  padding: 0;
 }
 
 .form-title {
@@ -99,6 +112,7 @@ function updateField(key: keyof DiaryFormData, event: Event) {
 .upload-area {
   min-width: 180px;
   min-height: 160px;
+  height: 160px;
   border: 2px dashed #d3d7de;
   border-radius: 10px;
   display: flex;
@@ -109,9 +123,17 @@ function updateField(key: keyof DiaryFormData, event: Event) {
   font-size: 14px;
   cursor: pointer;
   transition: border-color 0.2s;
+  overflow: hidden;
 }
 
 .upload-area:hover { border-color: #80ab64; }
+
+.preview-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
 
 @media (max-width: 760px) {
   .form-layout { grid-template-columns: 1fr; }

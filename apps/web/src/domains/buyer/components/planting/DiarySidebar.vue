@@ -34,10 +34,17 @@
 </template>
 
 <script setup lang="ts">
+interface PlantItem {
+  name: string
+  icon: string
+  status: string
+}
+
 defineProps<{
   activeCategory: string
   showPlantList: boolean
   selectedPlant: string
+  myPlants: PlantItem[]
 }>()
 
 defineEmits<{
@@ -54,13 +61,7 @@ const categories = [
   { key: 'note', icon: '📝', label: '随记' }
 ]
 
-const myPlants = [
-  { name: '番茄', icon: '🍅', status: '育苗中' },
-  { name: '薄荷', icon: '🌿', status: '生长旺盛' },
-  { name: '草莓', icon: '🍓', status: '已结果' },
-  { name: '月季', icon: '🌹', status: '等待发芽' },
-  { name: '罗勒', icon: '🌱', status: '刚播种' }
-]
+// myPlants now comes from parent as a prop
 </script>
 
 <style scoped>

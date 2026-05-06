@@ -14,17 +14,17 @@ public class PlantingDiaryService {
         this.plantingDiaryRepository = plantingDiaryRepository;
     }
 
-    public List<PlantingDiaryDto> listAllDiaries() {
-        return plantingDiaryRepository.findAllByOrderByDiaryDateDescIdDesc()
+    public List<PlantingDiaryDto> listByUserId(Long userId) {
+        return plantingDiaryRepository.findByUserIdOrderByDiaryDateDescIdDesc(userId)
                 .stream()
                 .map(this::toDto)
                 .toList();
     }
 
     @Transactional
-    public PlantingDiaryDto create(CreatePlantingDiaryRequest request) {
+    public PlantingDiaryDto create(CreatePlantingDiaryRequest request, Long userId) {
         PlantingDiary diary = new PlantingDiary();
-        diary.setUserId(request.userId());
+        diary.setUserId(userId);
         diary.setTitle(request.title());
         diary.setPlantName(request.plantName());
         diary.setCategory(request.category());
@@ -35,9 +35,12 @@ public class PlantingDiaryService {
     }
 
     @Transactional
-    public PlantingDiaryDto update(Long id, CreatePlantingDiaryRequest request) {
+    public PlantingDiaryDto update(Long id, CreatePlantingDiaryRequest request, Long userId) {
         PlantingDiary diary = plantingDiaryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Diary not found"));
+        if (!userId.equals(diary.getUserId())) {
+            throw new IllegalArgumentException("无权编辑他人日记");
+        }
         diary.setTitle(request.title());
         diary.setPlantName(request.plantName());
         diary.setCategory(request.category());
@@ -48,11 +51,13 @@ public class PlantingDiaryService {
     }
 
     @Transactional
-    public void delete(Long id) {
-        if (!plantingDiaryRepository.existsById(id)) {
-            throw new IllegalArgumentException("Diary not found");
+    public void delete(Long id, Long userId) {
+        PlantingDiary diary = plantingDiaryRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Diary not found"));
+        if (!userId.equals(diary.getUserId())) {
+            throw new IllegalArgumentException("无权删除他人日记");
         }
-        plantingDiaryRepository.deleteById(id);
+        plantingDiaryRepository.delete(diary);
     }
 
     private PlantingDiaryDto toDto(PlantingDiary diary) {

@@ -22,13 +22,14 @@
         <button class="action-btn edit" @click="emit('edit', record)">
           编辑
         </button>
-        <button class="action-btn delete" @click="emit('delete', record.id)">
+        <button class="action-btn delete" @click="handleDelete">
           删除
         </button>
       </div>
     </div>
     <div v-if="record.imageName" class="diary-card-image">
-      <span>🖼️ {{ record.imageName }}</span>
+      <img v-if="record.imageName.startsWith('http') || record.imageName.startsWith('/api/')" :src="record.imageName" :alt="record.title" />
+      <span v-else>🖼️ {{ record.imageName }}</span>
     </div>
   </article>
 </template>
@@ -45,6 +46,12 @@ const emit = defineEmits<{
   delete: [id: number]
   addDiary: [id: number]
 }>()
+
+function handleDelete() {
+  if (confirm('确定要删除这条日记吗？此操作不可恢复。')) {
+    emit('delete', props.record.id)
+  }
+}
 
 const tagLabelMap: Record<string, string> = {
   seedling: '育苗期',
@@ -122,7 +129,7 @@ const tagColorMap: Record<string, string> = {
 
 .diary-card-image {
   width: 160px;
-  min-height: 100px;
+  height: 120px;
   background: linear-gradient(135deg, #e6f4ea, #f0f7f1);
   display: flex;
   align-items: center;
@@ -131,6 +138,15 @@ const tagColorMap: Record<string, string> = {
   font-size: 13px;
   border-radius: 10px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.diary-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  align-self: stretch;
 }
 
 .card-actions {

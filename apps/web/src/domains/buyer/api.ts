@@ -332,6 +332,27 @@ export async function fetchPlantingDiaries() {
   }))
 }
 
+export async function createPlantingDiary(payload: { title: string; plantName: string; category: string; diaryDate: string; note: string; imageName: string | null }) {
+  const res = await http.post('/api/planting-diaries', payload) as { data: PlantingDiaryItem }
+  return res.data
+}
+
+export async function updatePlantingDiary(id: number, payload: { title: string; plantName: string; category: string; diaryDate: string; note: string; imageName: string | null }) {
+  const res = await http.put(`/api/planting-diaries/${id}`, payload) as { data: PlantingDiaryItem }
+  return res.data
+}
+
+export async function deletePlantingDiary(id: number) {
+  return http.delete(`/api/planting-diaries/${id}`)
+}
+
+export async function uploadPlantingDiaryImage(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await http.post('/api/planting-diaries/upload', formData) as { data: string }
+  return res.data
+}
+
 export async function fetchCart() {
   const res = await http.get('/api/cart') as { data: CartItemDto[] }
   return res.data
