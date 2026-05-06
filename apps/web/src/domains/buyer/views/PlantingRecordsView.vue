@@ -131,9 +131,10 @@ async function addRecord() {
     }
     newRecord.value = { title: '', plantName: '', category: 'seedling', note: '', date: new Date().toISOString().slice(0, 10), imageName: '' }
     showAddForm.value = false
-  } catch (e) {
+  } catch (e: any) {
     console.error('保存日记失败', e)
-    alert('保存失败，请检查内容后重试')
+    const msg = e?.response?.data?.message || '保存失败，请检查内容后重试'
+    alert(msg)
   }
 }
 

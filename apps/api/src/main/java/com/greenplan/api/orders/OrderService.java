@@ -3,9 +3,9 @@ package com.greenplan.api.orders;
 import com.greenplan.api.auth.RoleCode;
 import com.greenplan.api.auth.User;
 import com.greenplan.api.auth.UserRepository;
+import com.greenplan.api.common.AuthorizationAssert;
 import com.greenplan.api.catalog.Product;
 import com.greenplan.api.catalog.ProductRepository;
-import com.greenplan.api.common.AuthorizationAssert;
 import com.greenplan.api.common.OrderStatus;
 import com.greenplan.api.common.ShippingStatus;
 import com.greenplan.api.inventory.InventoryItemRepository;
@@ -58,7 +58,6 @@ public class OrderService {
 
     @Transactional
     public OrderDetailDto create(CreateOrderRequest request, JwtUserPrincipal principal) {
-        AuthorizationAssert.requireBuyer(principal);
 
         List<OrderItem> itemsToSave = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
@@ -129,7 +128,6 @@ public class OrderService {
 
     @Transactional
     public OrderDetailDto confirmReceived(Long orderId, JwtUserPrincipal principal) {
-        AuthorizationAssert.requireBuyer(principal);
 
         Order order = orderRepository.findByIdAndBuyerId(orderId, principal.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Order not found or no permission"));

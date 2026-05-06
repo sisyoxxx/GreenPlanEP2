@@ -213,9 +213,21 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const [orderList, reviewList] = await Promise.all([fetchMyOrders(), fetchMyReviews()])
-    orders.value = orderList || []
-    reviews.value = reviewList || []
+    const [orderRes, reviewRes] = await Promise.allSettled([fetchMyOrders(), fetchMyReviews()])
+    if (orderRes.status === 'fulfilled') {
+      orders.value = orderRes.value || []
+    } else {
+      console.error('加载订单失败', orderRes.reason)
+      error.value = orderRes.reason?.response?.data?.message || '订单加载失败'
+    }
+    if (reviewRes.status === 'fulfilled') {
+      reviews.value = reviewRes.value || []
+    } else {
+      console.error('加载评价失败', reviewRes.reason)
+      if (!error.value) {
+        error.value = reviewRes.reason?.response?.data?.message || '评价加载失败'
+      }
+    }
   } catch (err: any) {
     error.value = err?.response?.data?.message || '订单数据加载失败'
   } finally {

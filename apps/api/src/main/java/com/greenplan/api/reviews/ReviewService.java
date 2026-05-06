@@ -35,10 +35,6 @@ public class ReviewService {
     }
 
     public List<ProductReviewDto> listMine(JwtUserPrincipal principal) {
-        if (principal.getRole() != RoleCode.BUYER) {
-            throw new IllegalArgumentException("仅买家可查看自己的评价");
-        }
-
         return productReviewRepository.findByBuyerIdOrderByIdDesc(principal.getId()).stream()
                 .map(this::toDto)
                 .toList();

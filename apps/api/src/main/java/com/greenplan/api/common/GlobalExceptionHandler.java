@@ -17,7 +17,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex) {
-        return ResponseEntity.badRequest().body(new ApiResponse<>(false, ex.getMessage(), null));
+        String message = ex.getMessage();
+        if ("请先登录".equals(message)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponse<>(false, message, null));
+        }
+        return ResponseEntity.badRequest().body(new ApiResponse<>(false, message, null));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
