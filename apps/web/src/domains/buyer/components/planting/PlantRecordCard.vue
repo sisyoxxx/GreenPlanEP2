@@ -37,7 +37,7 @@
 <script setup lang="ts">
 import type { PlantRecord } from './types'
 
-defineProps<{
+const props = defineProps<{
   record: PlantRecord
 }>()
 
