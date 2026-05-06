@@ -89,7 +89,7 @@ onMounted(async () => {
 })
 
 async function addRecord() {
-  if (!newRecord.title || !newRecord.plantName) return
+  if (!newRecord.value.title || !newRecord.value.plantName) return
   try {
     if (editingId.value) {
       await updatePlantingDiary(editingId.value, {
