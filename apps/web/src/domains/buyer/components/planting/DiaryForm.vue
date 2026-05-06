@@ -64,13 +64,20 @@ function triggerUpload() {
 async function onFileChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    alert('图片超过 5MB，请选择更小的文件')
+    if (fileInput.value) fileInput.value.value = ''
+    return
+  }
   uploading.value = true
   try {
     const url = await uploadPlantingDiaryImage(file)
     emit('update:modelValue', { ...props.modelValue, imageName: url })
-  } catch (err) {
+  } catch (err: any) {
     console.error('上传失败', err)
-    alert('图片上传失败')
+    const msg = err?.response?.data?.message || '图片上传失败，请检查网络或文件大小'
+    alert(msg)
   } finally {
     uploading.value = false
     if (fileInput.value) fileInput.value.value = ''
