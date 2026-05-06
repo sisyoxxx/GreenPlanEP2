@@ -20,10 +20,10 @@
 
       <div class="actions">
         <button class="secondary-btn" :class="{ active: post.liked }" @click="like(post.id)">
-          {{ post.liked ? '已点赞' : '点赞' }} {{ post.likes }}
+          <span class="icon-like">{{ post.liked ? '♥' : '♡' }}</span> {{ post.likes }}
         </button>
         <button class="secondary-btn" :class="{ active: favoritePostIdSet.has(post.id) }" @click="toggleFavorite(post)">
-          {{ favoritePostIdSet.has(post.id) ? '已收藏' : '收藏' }}
+          <span class="icon-fav">{{ favoritePostIdSet.has(post.id) ? '★' : '☆' }}</span>
         </button>
       </div>
 
@@ -343,6 +343,14 @@ function getReplies(commentId: number) {
   border-color: #9ad3aa;
   background: #edf9ef;
   color: #1f7a41;
+}
+
+.icon-like {
+  color: #e74c3c;
+}
+
+.icon-fav {
+  color: #f39c12;
 }
 
 h1 {

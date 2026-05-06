@@ -89,8 +89,11 @@ public class CommunityController {
     public ApiResponse<Map<String, Object>> toggleFavorite(
             @PathVariable Long postId,
             Authentication authentication) {
-        JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-        boolean favorited = communityService.toggleFavorite(postId, principal);
+        Long userId = extractUserId(authentication);
+        if (userId == null) {
+            throw new IllegalArgumentException("请先登录");
+        }
+        boolean favorited = communityService.toggleFavorite(postId, userId);
         Map<String, Object> result = new HashMap<>();
         result.put("favorited", favorited);
         return ApiResponse.ok(favorited ? "已收藏" : "已取消收藏", result);

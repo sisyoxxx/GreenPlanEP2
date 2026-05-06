@@ -18,14 +18,14 @@
       <p>{{ post.content }}</p>
       <div class="row">
         <button class="action-btn" :class="{ active: post.liked }" @click.stop="$emit('like', post.id)">
-          <span>👍</span> {{ post.likes }}
+          <span>{{ post.liked ? '♥' : '♡' }}</span> {{ post.likes }}
         </button>
         <button
           class="action-btn"
           :class="{ active: favoritePostIdSet.has(post.id) }"
           @click.stop="$emit('toggleFavorite', post)"
         >
-          <span>⭐</span>
+          <span>{{ favoritePostIdSet.has(post.id) ? '★' : '☆' }}</span>
         </button>
         <button class="action-btn" @click.stop="$emit('prefillReply', post)">
           <span>💬</span> {{ (commentCounts?.[post.id]) ?? 0 }}

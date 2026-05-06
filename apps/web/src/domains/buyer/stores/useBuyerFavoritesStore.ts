@@ -97,6 +97,8 @@ export const useBuyerFavoritesStore = defineStore('buyer-favorites', {
         persist({ tutorialIds: this.tutorialIds, posts: this.posts })
       } catch (err: any) {
         console.error('收藏同步失败', err)
+        const msg = err?.response?.data?.message || '收藏失败，请检查网络或登录状态'
+        alert(msg)
       }
     },
     removePost(id: number) {

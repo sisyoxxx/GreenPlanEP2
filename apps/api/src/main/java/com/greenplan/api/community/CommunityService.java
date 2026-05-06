@@ -115,17 +115,17 @@ public class CommunityService {
     }
 
     @Transactional
-    public boolean toggleFavorite(Long postId, JwtUserPrincipal principal) {
+    public boolean toggleFavorite(Long postId, Long userId) {
         CommunityPost post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("帖子不存在"));
-        boolean alreadyFavorited = favoriteRepository.existsByPostIdAndUserId(postId, principal.getId());
+        boolean alreadyFavorited = favoriteRepository.existsByPostIdAndUserId(postId, userId);
         if (alreadyFavorited) {
-            favoriteRepository.deleteByPostIdAndUserId(postId, principal.getId());
+            favoriteRepository.deleteByPostIdAndUserId(postId, userId);
             return false;
         } else {
             PostFavorite favorite = new PostFavorite();
             favorite.setPostId(postId);
-            favorite.setUserId(principal.getId());
+            favorite.setUserId(userId);
             favoriteRepository.save(favorite);
             return true;
         }
