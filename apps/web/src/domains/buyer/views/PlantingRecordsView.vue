@@ -75,7 +75,7 @@ const showPlantList = ref(false)
 const selectedPlant = ref('')
 const editingId = ref<number | null>(null)
 
-const newRecord = reactive({ title: '', plantName: '', category: 'seedling', note: '', date: new Date().toISOString().slice(0, 10), imageName: '' })
+const newRecord = ref({ title: '', plantName: '', category: 'seedling', note: '', date: new Date().toISOString().slice(0, 10), imageName: '' })
 
 const records = ref<PlantRecord[]>([])
 
@@ -93,31 +93,31 @@ async function addRecord() {
   try {
     if (editingId.value) {
       await updatePlantingDiary(editingId.value, {
-        title: newRecord.title,
-        plantName: newRecord.plantName,
-        category: newRecord.category,
-        diaryDate: newRecord.date,
-        note: newRecord.note,
-        imageName: newRecord.imageName || null
+        title: newRecord.value.title,
+        plantName: newRecord.value.plantName,
+        category: newRecord.value.category,
+        diaryDate: newRecord.value.date,
+        note: newRecord.value.note,
+        imageName: newRecord.value.imageName || null
       })
       const target = records.value.find(r => r.id === editingId.value)
       if (target) {
-        target.title = newRecord.title
-        target.plantName = newRecord.plantName
-        target.category = newRecord.category
-        target.date = newRecord.date
-        target.note = newRecord.note
-        target.imageName = newRecord.imageName
+        target.title = newRecord.value.title
+        target.plantName = newRecord.value.plantName
+        target.category = newRecord.value.category
+        target.date = newRecord.value.date
+        target.note = newRecord.value.note
+        target.imageName = newRecord.value.imageName
       }
       editingId.value = null
     } else {
       const created = await createPlantingDiary({
-        title: newRecord.title,
-        plantName: newRecord.plantName,
-        category: newRecord.category,
-        diaryDate: newRecord.date,
-        note: newRecord.note,
-        imageName: newRecord.imageName || null
+        title: newRecord.value.title,
+        plantName: newRecord.value.plantName,
+        category: newRecord.value.category,
+        diaryDate: newRecord.value.date,
+        note: newRecord.value.note,
+        imageName: newRecord.value.imageName || null
       })
       records.value.unshift({
         id: created.id,
@@ -129,8 +129,7 @@ async function addRecord() {
         imageName: created.imageName ?? ''
       })
     }
-    newRecord.title = ''; newRecord.plantName = ''; newRecord.note = ''; newRecord.category = 'seedling'
-    newRecord.date = new Date().toISOString().slice(0, 10); newRecord.imageName = ''
+    newRecord.value = { title: '', plantName: '', category: 'seedling', note: '', date: new Date().toISOString().slice(0, 10), imageName: '' }
     showAddForm.value = false
   } catch (e) {
     console.error('保存日记失败', e)
@@ -140,19 +139,13 @@ async function addRecord() {
 
 function onEdit(record: PlantRecord) {
   editingId.value = record.id
-  newRecord.title = record.title
-  newRecord.plantName = record.plantName
-  newRecord.category = record.category
-  newRecord.date = record.date
-  newRecord.note = record.note
-  newRecord.imageName = record.imageName
+  newRecord.value = { title: record.title, plantName: record.plantName, category: record.category, date: record.date, note: record.note, imageName: record.imageName }
   showAddForm.value = true
 }
 
 function cancelForm() {
   editingId.value = null
-  newRecord.title = ''; newRecord.plantName = ''; newRecord.note = ''; newRecord.category = 'seedling'
-  newRecord.date = new Date().toISOString().slice(0, 10); newRecord.imageName = ''
+  newRecord.value = { title: '', plantName: '', category: 'seedling', note: '', date: new Date().toISOString().slice(0, 10), imageName: '' }
   showAddForm.value = false
 }
 
@@ -170,19 +163,14 @@ function toggleAddForm() {
   showAddForm.value = !showAddForm.value
   if (showAddForm.value) {
     editingId.value = null
-    newRecord.title = ''
-    newRecord.plantName = ''
-    newRecord.note = ''
-    newRecord.category = 'seedling'
-    newRecord.date = new Date().toISOString().slice(0, 10)
-    newRecord.imageName = ''
+    newRecord.value = { title: '', plantName: '', category: 'seedling', note: '', date: new Date().toISOString().slice(0, 10), imageName: '' }
   }
 }
 
 function onAddDiary(id: number) {
   const record = records.value.find(r => r.id === id)
   if (record) {
-    newRecord.plantName = record.plantName
+    newRecord.value.plantName = record.plantName
     showAddForm.value = true
   }
 }
