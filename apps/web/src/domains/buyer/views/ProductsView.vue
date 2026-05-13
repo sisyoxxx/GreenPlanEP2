@@ -280,10 +280,10 @@ async function buyNow(item: Product) {
   if (!confirmed) return
 
   try {
-    const res = (await createOrder([{ productId: item.id, quantity: 1 }])) as { data: { id: number; orderNo: string } }
-    message.value = `${item.name} 已下单，订单号：${res.data.orderNo}`
+    const order = await createOrder([{ productId: item.id, quantity: 1 }])
+    message.value = `${item.name} 已下单，订单号：${order.orderNo}`
     await reload()
-    router.push(`/orders?focus=${res.data.id}`)
+    router.push(`/orders?focus=${order.id}`)
   } catch (err: any) {
     const msg = err?.response?.data?.message || '下单失败'
     message.value = msg
@@ -299,7 +299,7 @@ function goCheckout() {
 <style scoped>
 .products-shell {
   display: grid;
-  grid-template-columns: 336px minmax(0, 1fr);
+  grid-template-columns: 300px minmax(0, 1fr);
   gap: 18px;
   align-items: stretch;
   height: calc(100vh - 108px);

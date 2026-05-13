@@ -11,6 +11,7 @@ public record ProductReviewDto(
         String buyerUsername,
         Integer rating,
         String content,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        String productStatus
 ) {
 }

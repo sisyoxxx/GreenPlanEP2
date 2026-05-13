@@ -6,6 +6,9 @@
       <table class="prod-table">
         <thead>
           <tr>
+            <th class="checkbox-col">
+              <input type="checkbox" :checked="isAllSelected" @change="$emit('toggleSelectAll')" />
+            </th>
             <th>商品</th>
             <th>SKU</th>
             <th>分类</th>
@@ -20,6 +23,9 @@
         </thead>
         <tbody>
           <tr v-for="item in items" :key="item.id">
+            <td class="checkbox-col">
+              <input type="checkbox" :checked="selectedIds.includes(item.id)" @change="$emit('toggleSelect', item.id)" />
+            </td>
             <td>
               <div class="name-cell">
                 <img v-if="item.imageUrl" :src="item.imageUrl" alt="product" />
@@ -37,14 +43,15 @@
             <td>¥{{ Number(item.price).toFixed(2) }}</td>
             <td>{{ item.onlineStock }}</td>
             <td>
-              <span :class="['status-tag', item.status === 'PUBLISHED' ? 'on' : 'off']">
-                {{ item.status === 'PUBLISHED' ? '在售' : '下架' }}
+              <span :class="['status-tag', statusClass(item.status)]">
+                {{ statusText(item.status) }}
               </span>
             </td>
             <td>
               <div class="row-actions">
                 <button class="text-link" @click="$emit('edit', item)">编辑</button>
                 <button class="text-link" @click="$emit('toggleStatus', item)">{{ item.status === 'PUBLISHED' ? '下架' : '上架' }}</button>
+                <button class="text-link danger" @click="$emit('delete', item)">删除</button>
               </div>
             </td>
           </tr>
@@ -60,6 +67,8 @@ import type { AdminProduct } from '../api'
 defineProps<{
   items: AdminProduct[]
   loading: boolean
+  selectedIds: number[]
+  isAllSelected: boolean
 }>()
 
 defineEmits<{
@@ -67,7 +76,21 @@ defineEmits<{
   (e: 'delete', item: AdminProduct): void
   (e: 'toggleStatus', item: AdminProduct): void
   (e: 'preview', item: AdminProduct): void
+  (e: 'toggleSelect', id: number): void
+  (e: 'toggleSelectAll'): void
 }>()
+
+function statusClass(status: string) {
+  if (status === 'PUBLISHED') return 'on'
+  if (status === 'UNPUBLISHED') return 'off'
+  return 'deleted'
+}
+
+function statusText(status: string) {
+  if (status === 'PUBLISHED') return '在售'
+  if (status === 'UNPUBLISHED') return '下架'
+  return '已删除'
+}
 </script>
 
 <style scoped>
@@ -136,18 +159,33 @@ defineEmits<{
   color: #6b7280;
 }
 
+.status-tag.deleted {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .text-link {
   border: none;
   background: transparent;
   color: #1f7a41;
   padding: 0;
   font-size: 13px;
+  cursor: pointer;
+}
+
+.text-link.danger {
+  color: #dc2626;
 }
 
 .row-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.checkbox-col {
+  width: 40px;
+  text-align: center;
 }
 
 .empty-state {

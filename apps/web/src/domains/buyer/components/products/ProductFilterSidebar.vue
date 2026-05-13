@@ -111,9 +111,7 @@ defineEmits<{
 }
 
 .category-chip-group {
-  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
 }
 
 .month-chip-group {
@@ -129,13 +127,14 @@ defineEmits<{
 }
 
 .month-chip {
-  width: 100%;
+  width: 80px;
   min-width: 0;
   justify-content: center;
 }
 
 .category-chip {
-  min-height: 88px;
+  min-height: 100px;
+  min-width: 110px;
   border-radius: 12px;
   background: #f8fcf8;
   border: 1px solid #e4efe6;
@@ -151,7 +150,7 @@ defineEmits<{
 
 .category-chip-icon {
   font-size: 20px;
-  line-height: 1;
+  line-height: 1.5;
 }
 
 .category-chip-label {

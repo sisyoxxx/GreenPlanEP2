@@ -3,6 +3,9 @@ package com.greenplan.api.profile;
 import com.greenplan.api.auth.User;
 import com.greenplan.api.auth.UserRepository;
 import com.greenplan.api.common.StringUtils;
+import com.greenplan.api.common.exception.BusinessException;
+import com.greenplan.api.common.exception.PermissionDeniedException;
+import com.greenplan.api.common.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,23 +25,23 @@ public class ProfileService {
 
     public MyProfileDto getMyProfile(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("用户不存在"));
         return toDto(user);
     }
 
     @Transactional
     public MyProfileDto updateMyProfile(Long userId, UpdateMyProfileRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("用户不存在"));
 
         String nextUsername = StringUtils.normalizeBlankToNull(request.username());
         if (nextUsername != null) {
             if (nextUsername.length() > 64) {
-                throw new IllegalArgumentException("Username must be at most 64 characters");
+                throw new BusinessException("用户名最多 64 个字符");
             }
             String currentUsername = user.getUsername();
             if (!nextUsername.equals(currentUsername) && userRepository.existsByUsername(nextUsername)) {
-                throw new IllegalArgumentException("Username already exists");
+                throw new BusinessException("用户名已存在");
             }
             user.setUsername(nextUsername);
         }
@@ -76,9 +79,9 @@ public class ProfileService {
     @Transactional
     public AddressDto updateAddress(Long userId, Long addressId, UpsertAddressRequest request) {
         UserAddress address = userAddressRepository.findById(addressId)
-                .orElseThrow(() -> new IllegalArgumentException("Address not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("地址不存在"));
         if (!address.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("No permission to update this address");
+            throw new PermissionDeniedException("无权修改此地址");
         }
 
         address.setAddressText(request.addressText().trim());
@@ -95,9 +98,9 @@ public class ProfileService {
     @Transactional
     public void deleteAddress(Long userId, Long addressId) {
         UserAddress address = userAddressRepository.findById(addressId)
-                .orElseThrow(() -> new IllegalArgumentException("Address not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("地址不存在"));
         if (!address.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("No permission to delete this address");
+            throw new PermissionDeniedException("无权删除此地址");
         }
         userAddressRepository.delete(address);
     }

@@ -28,7 +28,7 @@
           <span>{{ favoritePostIdSet.has(post.id) ? '★' : '☆' }}</span>
         </button>
         <button class="action-btn" @click.stop="$emit('prefillReply', post)">
-          <span>💬</span> {{ (commentCounts?.[post.id]) ?? 0 }}
+          <span>💬</span> {{ post.commentCount ?? 0 }}
         </button>
         <button class="action-btn" @click.stop="$emit('prefillMessage', post)">
           <span>✉️</span>
@@ -45,7 +45,6 @@ import type { CommunityPostItem } from '../../stores/useBuyerCommunityStore'
 defineProps<{
   posts: CommunityPostItem[]
   favoritePostIdSet: Set<number>
-  commentCounts?: Record<number, number>
   showEmpty?: boolean
   emptyText?: string
 }>()

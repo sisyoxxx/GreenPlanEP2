@@ -62,14 +62,18 @@ public class OrderMapper {
         return new OrderDetailDto(
                 order.getId(),
                 order.getOrderNo(),
-                order.getStatus() == null ? null : order.getStatus().name(),
+                enumName(order.getStatus()),
                 order.getTotalAmount(),
                 order.getShippingCarrier(),
                 order.getTrackingNo(),
-                order.getShippingStatus() == null ? null : order.getShippingStatus().name(),
+                enumName(order.getShippingStatus()),
                 order.getShippedAt(),
                 order.getCreatedAt(),
                 items
         );
+    }
+
+    public static String enumName(Enum<?> value) {
+        return value == null ? null : value.name();
     }
 }

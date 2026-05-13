@@ -15,6 +15,7 @@ export interface Product {
   imageUrl: string
   onlineStock: number
   sales: number
+  status: string
 }
 
 export interface TutorialItem {
@@ -89,6 +90,7 @@ export interface ProductReview {
   rating: number
   content: string
   createdAt: string | null
+  productStatus?: string
 }
 
 export interface MyProfile {
@@ -120,90 +122,75 @@ export interface AiChatResponse {
 }
 
 export async function fetchProducts() {
-  const res = await http.get('/api/products') as { data: Product[] }
-  return res.data
+  return (await http.get('/api/products')) as Product[]
 }
 
 export async function fetchTutorials() {
-  const res = await http.get('/api/tutorials') as { data: TutorialList }
-  return res.data
+  return (await http.get('/api/tutorials')) as TutorialList
 }
 
 export async function fetchTutorialDetail(id: number) {
-  const res = await http.get(`/api/tutorials/${id}`) as { data: TutorialItem }
-  return res.data
+  return (await http.get(`/api/tutorials/${id}`)) as TutorialItem
 }
 
 export async function fetchAnnouncements() {
-  const res = await http.get('/api/announcements') as { data: AnnouncementItem[] }
-  return res.data
+  return (await http.get('/api/announcements')) as AnnouncementItem[]
 }
 
 export async function fetchPromotions() {
-  const res = await http.get('/api/promotions') as { data: PromotionItem[] }
-  return res.data
+  return (await http.get('/api/promotions')) as PromotionItem[]
 }
 
 export async function fetchProduct(id: number) {
-  const res = await http.get(`/api/products/${id}`) as { data: Product }
-  return res.data
+  return (await http.get(`/api/products/${id}`)) as Product
 }
 
 export async function fetchProductReviews(productId: number) {
-  const res = await http.get(`/api/products/${productId}/reviews`) as { data: ProductReview[] }
-  return res.data
+  return (await http.get(`/api/products/${productId}/reviews`)) as ProductReview[]
 }
 
-export async function createOrder(items: Array<{ productId: number; quantity: number }>) {
-  return http.post('/api/orders', { items })
+export async function createOrder(items: Array<{ productId: number; quantity: number }>): Promise<BuyerOrder> {
+  return http.post('/api/orders', { items }) as Promise<BuyerOrder>
 }
 
 export async function fetchMyOrders() {
-  const res = await http.get('/api/orders/me') as { data: BuyerOrder[] }
-  return res.data
+  return (await http.get('/api/orders/me')) as BuyerOrder[]
 }
 
 export async function confirmMyOrderReceived(orderId: number) {
-  const res = await http.patch(`/api/orders/${orderId}/received`) as { data: BuyerOrder }
-  return res.data
+  return (await http.patch(`/api/orders/${orderId}/received`)) as BuyerOrder
 }
 
 export async function fetchMyReviews() {
-  const res = await http.get('/api/reviews/me') as { data: ProductReview[] }
-  return res.data
+  return (await http.get('/api/reviews/me')) as ProductReview[]
 }
 
-export async function createReview(orderId: number, payload: { productId: number; rating: number; content: string }) {
-  return http.post(`/api/orders/${orderId}/reviews`, payload)
+export async function createReview(orderId: number, payload: { productId: number; rating: number; content: string }): Promise<ProductReview> {
+  return http.post(`/api/orders/${orderId}/reviews`, payload) as Promise<ProductReview>
 }
 
 export async function fetchMyProfile() {
-  const res = await http.get('/api/profile/me') as { data: MyProfile }
-  return res.data
+  return (await http.get('/api/profile/me')) as MyProfile
 }
 
 export async function updateMyProfile(payload: Partial<Pick<MyProfile, 'username' | 'nickname' | 'gender' | 'phone' | 'avatarDataUrl'>>) {
-  const res = await http.put('/api/profile/me', payload) as { data: MyProfile }
-  return res.data
+  return (await http.put('/api/profile/me', payload)) as MyProfile
 }
 
 export async function fetchMyAddresses() {
-  const res = await http.get('/api/profile/me/addresses') as { data: MyAddress[] }
-  return res.data
+  return (await http.get('/api/profile/me/addresses')) as MyAddress[]
 }
 
 export async function createMyAddress(payload: { addressText: string; isDefault: boolean }) {
-  const res = await http.post('/api/profile/me/addresses', payload) as { data: MyAddress }
-  return res.data
+  return (await http.post('/api/profile/me/addresses', payload)) as MyAddress
 }
 
 export async function updateMyAddress(id: number, payload: { addressText: string; isDefault: boolean }) {
-  const res = await http.put(`/api/profile/me/addresses/${id}`, payload) as { data: MyAddress }
-  return res.data
+  return (await http.put(`/api/profile/me/addresses/${id}`, payload)) as MyAddress
 }
 
-export async function deleteMyAddress(id: number) {
-  return http.delete(`/api/profile/me/addresses/${id}`)
+export async function deleteMyAddress(id: number): Promise<void> {
+  return http.delete(`/api/profile/me/addresses/${id}`) as Promise<void>
 }
 
 export interface CommunityPost {
@@ -213,6 +200,7 @@ export interface CommunityPost {
   content: string
   imageUrl: string | null
   likes: number
+  commentCount: number
   author: string
   authorId: number
   mine: boolean
@@ -249,49 +237,43 @@ export interface CommunityPostDetail {
 }
 
 export async function fetchCommunityPosts() {
-  const res = await http.get('/api/community/posts') as { data: CommunityPost[] }
-  return res.data
+  return (await http.get('/api/community/posts')) as CommunityPost[]
 }
 
 export async function fetchCommunityPostDetail(id: number) {
-  const res = await http.get(`/api/community/posts/${id}`) as { data: CommunityPostDetail }
-  return res.data
+  return (await http.get(`/api/community/posts/${id}`)) as CommunityPostDetail
 }
 
-export async function createCommunityPost(payload: { topic: string; title: string; content: string; imageUrl?: string | null }) {
-  return http.post('/api/community/posts', payload)
+export async function createCommunityPost(payload: { topic: string; title: string; content: string; imageUrl?: string | null }): Promise<CommunityPost> {
+  return http.post('/api/community/posts', payload) as Promise<CommunityPost>
 }
 
-export async function updateCommunityPost(id: number, payload: { topic: string; title: string; content: string; imageUrl?: string | null }) {
-  return http.put(`/api/community/posts/${id}`, payload)
+export async function updateCommunityPost(id: number, payload: { topic: string; title: string; content: string; imageUrl?: string | null }): Promise<CommunityPost> {
+  return http.put(`/api/community/posts/${id}`, payload) as Promise<CommunityPost>
 }
 
-export async function deleteCommunityPost(id: number) {
-  return http.delete(`/api/community/posts/${id}`)
+export async function deleteCommunityPost(id: number): Promise<void> {
+  return http.delete(`/api/community/posts/${id}`) as Promise<void>
 }
 
 export async function toggleLikePost(id: number) {
-  const res = await http.post(`/api/community/posts/${id}/like`) as { data: { liked: boolean; likeCount: number } }
-  return res.data
+  return (await http.post(`/api/community/posts/${id}/like`)) as { liked: boolean; likeCount: number }
 }
 
 export async function toggleFavoritePost(id: number) {
-  const res = await http.post(`/api/community/posts/${id}/favorite`) as { data: { favorited: boolean } }
-  return res.data
+  return (await http.post(`/api/community/posts/${id}/favorite`)) as { favorited: boolean }
 }
 
 export async function fetchFavoritePostIds() {
-  const res = await http.get('/api/community/posts/favorites') as { data: number[] }
-  return res.data
+  return (await http.get('/api/community/posts/favorites')) as number[]
 }
 
-export async function createCommunityComment(postId: number, payload: { content: string; parentCommentId?: number | null }) {
-  return http.post(`/api/community/posts/${postId}/comments`, payload)
+export async function createCommunityComment(postId: number, payload: { content: string; parentCommentId?: number | null }): Promise<CommunityComment> {
+  return http.post(`/api/community/posts/${postId}/comments`, payload) as Promise<CommunityComment>
 }
 
 export async function aiChat(messages: AiChatMessage[]) {
-  const res = await http.post('/api/ai/chat', { messages }) as { data: AiChatResponse }
-  return res.data
+  return (await http.post('/api/ai/chat', { messages })) as AiChatResponse
 }
 
 export interface CartItemDto {
@@ -320,8 +302,8 @@ export interface PlantingDiaryItem {
 }
 
 export async function fetchPlantingDiaries() {
-  const res = await http.get('/api/planting-diaries') as { data: PlantingDiaryItem[] }
-  return res.data.map(d => ({
+  const items = (await http.get('/api/planting-diaries')) as PlantingDiaryItem[]
+  return items.map(d => ({
     id: d.id,
     title: d.title,
     plantName: d.plantName,
@@ -333,43 +315,39 @@ export async function fetchPlantingDiaries() {
 }
 
 export async function createPlantingDiary(payload: { title: string; plantName: string; category: string; diaryDate: string; note: string; imageName: string | null }) {
-  const res = await http.post('/api/planting-diaries', payload) as { data: PlantingDiaryItem }
-  return res.data
+  return (await http.post('/api/planting-diaries', payload)) as PlantingDiaryItem
 }
 
 export async function updatePlantingDiary(id: number, payload: { title: string; plantName: string; category: string; diaryDate: string; note: string; imageName: string | null }) {
-  const res = await http.put(`/api/planting-diaries/${id}`, payload) as { data: PlantingDiaryItem }
-  return res.data
+  return (await http.put(`/api/planting-diaries/${id}`, payload)) as PlantingDiaryItem
 }
 
-export async function deletePlantingDiary(id: number) {
-  return http.delete(`/api/planting-diaries/${id}`)
+export async function deletePlantingDiary(id: number): Promise<void> {
+  return http.delete(`/api/planting-diaries/${id}`) as Promise<void>
 }
 
 export async function uploadPlantingDiaryImage(file: File) {
   const formData = new FormData()
   formData.append('file', file)
-  const res = await http.post('/api/planting-diaries/upload', formData) as { data: string }
-  return res.data
+  return (await http.post('/api/planting-diaries/upload', formData)) as string
 }
 
 export async function fetchCart() {
-  const res = await http.get('/api/cart') as { data: CartItemDto[] }
-  return res.data
+  return (await http.get('/api/cart')) as CartItemDto[]
 }
 
-export async function addCartItem(productId: number, quantity: number) {
-  return http.post('/api/cart/items', { productId, quantity })
+export async function addCartItem(productId: number, quantity: number): Promise<void> {
+  return http.post('/api/cart/items', { productId, quantity }) as Promise<void>
 }
 
-export async function updateCartItem(productId: number, quantity: number) {
-  return http.put(`/api/cart/items/${productId}`, { quantity })
+export async function updateCartItem(productId: number, quantity: number): Promise<void> {
+  return http.put(`/api/cart/items/${productId}`, { quantity }) as Promise<void>
 }
 
-export async function removeCartItem(productId: number) {
-  return http.delete(`/api/cart/items/${productId}`)
+export async function removeCartItem(productId: number): Promise<void> {
+  return http.delete(`/api/cart/items/${productId}`) as Promise<void>
 }
 
-export async function clearCart() {
-  return http.delete('/api/cart')
+export async function clearCart(): Promise<void> {
+  return http.delete('/api/cart') as Promise<void>
 }

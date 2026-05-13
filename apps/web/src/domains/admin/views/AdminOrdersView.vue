@@ -4,7 +4,7 @@
       <section class="page-head page-lite">
         <div>
           <h2 class="page-title">订单管理</h2>
-          <p class="page-desc">仅查看订单状态与详情，发货流程由库存端处理，评价回复请到“用户评价”页面。</p>
+          <p class="page-desc">仅查看订单状态与详情，发货流程由库存端处理，评价回复请到“审核”页面。</p>
         </div>
         <button class="secondary-btn" :disabled="loading" @click="loadOrders">{{ loading ? '刷新中...' : '刷新' }}</button>
       </section>
@@ -71,11 +71,11 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AdminLayout from '../../../layouts/AdminLayout.vue'
-import { fetchAdminOrders, type AdminOrderListItem } from '../api'
+import { fetchAdminOrders, fetchAdminReviews, type AdminOrderListItem, type AdminOrderReviewItem } from '../api'
 import { formatDateTime } from '../../../utils/format'
 import { ORDER_STATUS_MAP, SHIPPING_STATUS_MAP, ORDER_STATUS_CLASS } from '../../../utils/constants'
 
-type TabKey = 'all' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'PENDING'
+type TabKey = 'all' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'REVIEWED'
 
 const router = useRouter()
 const loading = ref(false)
@@ -84,22 +84,29 @@ const error = ref('')
 const keyword = ref('')
 const activeTab = ref<TabKey>('all')
 const list = ref<AdminOrderListItem[]>([])
+const reviews = ref<AdminOrderReviewItem[]>([])
+
+const reviewedOrderIds = computed(() => new Set(reviews.value.filter(r => r.orderId !== null).map(r => r.orderId!)))
 
 const tabs = computed(() => {
   const count = (status: string) => list.value.filter((item) => item.status === status).length
   return [
     { key: 'all' as TabKey, label: '全部', count: list.value.length },
-    { key: 'PENDING' as TabKey, label: '待支付', count: count('PENDING') },
     { key: 'PAID' as TabKey, label: '待发货', count: count('PAID') },
     { key: 'SHIPPED' as TabKey, label: '运输中', count: count('SHIPPED') },
-    { key: 'DELIVERED' as TabKey, label: '已收货', count: count('DELIVERED') }
+    { key: 'DELIVERED' as TabKey, label: '已收货', count: count('DELIVERED') },
+    { key: 'REVIEWED' as TabKey, label: '已评价', count: list.value.filter(item => reviewedOrderIds.value.has(item.id)).length }
   ]
 })
 
 const filtered = computed(() => {
   let data = list.value
   if (activeTab.value !== 'all') {
-    data = data.filter((item) => item.status === activeTab.value)
+    if (activeTab.value === 'REVIEWED') {
+      data = data.filter(item => reviewedOrderIds.value.has(item.id))
+    } else {
+      data = data.filter((item) => item.status === activeTab.value)
+    }
   }
   const kw = keyword.value.toLowerCase()
   if (!kw) return data
@@ -109,7 +116,10 @@ const filtered = computed(() => {
   })
 })
 
-onMounted(loadOrders)
+onMounted(async () => {
+  await loadOrders()
+  await loadReviews()
+})
 
 async function loadOrders() {
   loading.value = true
@@ -120,6 +130,14 @@ async function loadOrders() {
     error.value = err?.response?.data?.message || '订单加载失败'
   } finally {
     loading.value = false
+  }
+}
+
+async function loadReviews() {
+  try {
+    reviews.value = await fetchAdminReviews()
+  } catch {
+    reviews.value = []
   }
 }
 

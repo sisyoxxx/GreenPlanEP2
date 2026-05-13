@@ -1,5 +1,6 @@
 package com.greenplan.api.auth;
 
+import com.greenplan.api.common.exception.BusinessException;
 import com.greenplan.api.security.JwtTokenProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,7 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.username())) {
-            throw new IllegalArgumentException("用户名已存在");
+            throw new BusinessException("用户名已存在");
         }
         User user = new User();
         user.setUsername(request.username());
@@ -33,20 +34,20 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByUsername(request.username())
-                .orElseThrow(() -> new IllegalArgumentException("用户名或密码错误"));
+                .orElseThrow(() -> new BusinessException("用户名或密码错误"));
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new IllegalArgumentException("用户名或密码错误");
+            throw new BusinessException("用户名或密码错误");
         }
         return buildAuthResponse(user);
     }
 
     public AuthResponse refresh(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
-            throw new IllegalArgumentException("refreshToken不能为空");
+            throw new BusinessException("refreshToken不能为空");
         }
         return userRepository.findByRefreshToken(refreshToken)
                 .map(this::buildAuthResponse)
-                .orElseThrow(() -> new IllegalArgumentException("无效refreshToken"));
+                .orElseThrow(() -> new BusinessException("无效refreshToken"));
     }
 
     private AuthResponse buildAuthResponse(User user) {

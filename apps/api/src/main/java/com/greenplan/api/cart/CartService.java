@@ -4,6 +4,7 @@ import com.greenplan.api.catalog.Product;
 import com.greenplan.api.catalog.ProductRepository;
 import com.greenplan.api.inventory.InventoryItem;
 import com.greenplan.api.inventory.InventoryItemRepository;
+import com.greenplan.api.common.exception.ResourceNotFoundException;
 import com.greenplan.api.security.JwtUserPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +37,7 @@ public class CartService {
     @Transactional
     public CartItemDto addItem(AddCartItemRequest request, JwtUserPrincipal principal) {
         Product product = productRepository.findById(request.productId())
-                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + request.productId()));
+                .orElseThrow(() -> new ResourceNotFoundException("商品不存在: " + request.productId()));
 
         int maxStock = getOnlineStock(product.getId());
         int safeQuantity = Math.max(1, Math.min(request.quantity(), Math.max(1, maxStock)));
@@ -64,7 +65,7 @@ public class CartService {
     @Transactional
     public CartItemDto updateQuantity(Long productId, UpdateCartItemRequest request, JwtUserPrincipal principal) {
         CartItem item = cartItemRepository.findByUserIdAndProductId(principal.getId(), productId)
-                .orElseThrow(() -> new IllegalArgumentException("Cart item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("购物车商品不存在"));
 
         int maxStock = getOnlineStock(productId);
         int safeQuantity = Math.max(1, Math.min(request.quantity(), Math.max(1, maxStock)));
@@ -93,7 +94,7 @@ public class CartService {
 
     private CartItemDto toDto(CartItem item) {
         Product product = productRepository.findById(item.getProductId())
-                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + item.getProductId()));
+                .orElseThrow(() -> new ResourceNotFoundException("商品不存在: " + item.getProductId()));
 
         int stock = getOnlineStock(product.getId());
 

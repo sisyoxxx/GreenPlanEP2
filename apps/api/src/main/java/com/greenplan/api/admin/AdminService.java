@@ -3,6 +3,8 @@ package com.greenplan.api.admin;
 import com.greenplan.api.common.AuthorizationAssert;
 import com.greenplan.api.common.ProductStatus;
 import com.greenplan.api.common.StringUtils;
+import com.greenplan.api.common.exception.BusinessException;
+import com.greenplan.api.common.exception.ResourceNotFoundException;
 import com.greenplan.api.security.JwtUserPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,7 +65,7 @@ public class AdminService {
     public Announcement updateAnnouncement(Long announcementId, AnnouncementRequest request, JwtUserPrincipal principal) {
         AuthorizationAssert.requireAdmin(principal);
         Announcement announcement = announcementRepository.findById(announcementId)
-                .orElseThrow(() -> new IllegalArgumentException("Announcement not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("公告不存在"));
         ensurePublishedAnnouncement(announcement);
         announcement.setTitle(request.title());
         announcement.setContent(request.content());
@@ -75,7 +77,7 @@ public class AdminService {
     public void deleteAnnouncement(Long announcementId, JwtUserPrincipal principal) {
         AuthorizationAssert.requireAdmin(principal);
         Announcement announcement = announcementRepository.findById(announcementId)
-                .orElseThrow(() -> new IllegalArgumentException("Announcement not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("公告不存在"));
         ensurePublishedAnnouncement(announcement);
         announcementRepository.delete(announcement);
     }
@@ -99,7 +101,7 @@ public class AdminService {
     public Promotion updatePromotion(Long promotionId, PromotionRequest request, JwtUserPrincipal principal) {
         AuthorizationAssert.requireAdmin(principal);
         Promotion promotion = promotionRepository.findById(promotionId)
-                .orElseThrow(() -> new IllegalArgumentException("Promotion not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("促销不存在"));
         ensurePublishedPromotion(promotion);
         promotion.setTitle(request.title());
         promotion.setStrategyType(request.strategyType());
@@ -114,7 +116,7 @@ public class AdminService {
     public void deletePromotion(Long promotionId, JwtUserPrincipal principal) {
         AuthorizationAssert.requireAdmin(principal);
         Promotion promotion = promotionRepository.findById(promotionId)
-                .orElseThrow(() -> new IllegalArgumentException("Promotion not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("促销不存在"));
         ensurePublishedPromotion(promotion);
         promotionRepository.delete(promotion);
     }
@@ -141,7 +143,7 @@ public class AdminService {
         String channel = normalizeChannel(request.channel());
         validatePostChannel(channel);
         PromotionPost post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("Promotion post not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("推广帖子不存在"));
         post.setPromotionId(request.promotionId());
         post.setChannel(channel);
         post.setContent(request.content());
@@ -155,25 +157,25 @@ public class AdminService {
     public void deletePromotionPost(Long postId, JwtUserPrincipal principal) {
         AuthorizationAssert.requireAdmin(principal);
         PromotionPost post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("Promotion post not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("推广帖子不存在"));
         postRepository.delete(post);
     }
 
     private void validatePostChannel(String channel) {
         if (!ALLOWED_POST_CHANNELS.contains(channel)) {
-            throw new IllegalArgumentException("Unsupported promotion post channel");
+            throw new BusinessException("不支持的推广渠道");
         }
     }
 
     private void ensurePublishedAnnouncement(Announcement announcement) {
         if (!ProductStatus.PUBLISHED.name().equalsIgnoreCase(announcement.getStatus())) {
-            throw new IllegalArgumentException("Only published announcements can be edited or deleted");
+            throw new BusinessException("只有已发布的公告才能编辑或删除");
         }
     }
 
     private void ensurePublishedPromotion(Promotion promotion) {
         if (!ProductStatus.PUBLISHED.name().equalsIgnoreCase(promotion.getStatus())) {
-            throw new IllegalArgumentException("Only published promotions can be edited or deleted");
+            throw new BusinessException("只有已发布的促销才能编辑或删除");
         }
     }
 

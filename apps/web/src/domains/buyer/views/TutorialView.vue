@@ -21,87 +21,23 @@
               <input v-model="searchKeyword" type="text" placeholder="搜索教程标题或关键词..." class="search-input" />
             </div>
 
-            <div v-if="status === 'loading'" class="empty-state page-lite">
-              <p class="empty-hint">教程加载中...</p>
-            </div>
-            <div v-else-if="status === 'error'" class="empty-state page-lite">
-              <p class="empty-hint">{{ error }}</p>
-            </div>
-            <div v-else-if="filteredTutorials.length === 0" class="empty-state page-lite">
-              <p class="empty-hint">没有找到相关教程</p>
-            </div>
-            <div v-else class="tutorial-grid">
-              <article class="tutorial-card page-lite" v-for="item in filteredTutorials" :key="item.id" @click="openTutorialDetail(item.id)">
-                <div v-if="item.mediaUrl" class="card-media">
-                  <video v-if="item.mediaType === 'VIDEO'" :src="item.mediaUrl" muted playsinline preload="metadata" />
-                  <img v-else :src="item.mediaUrl" :alt="item.title" />
-                </div>
-                <div class="card-body">
-                  <div class="card-tags">
-                    <span class="card-chip category-chip">{{ getCategoryLabel(item.categoryCode) }}</span>
-                    <span v-if="item.mediaUrl && item.tag" class="card-chip">{{ item.tag }}</span>
-                  </div>
-                  <div class="card-title-row">
-                    <h3 class="card-title">{{ item.title }}</h3>
-                    <button class="fav-btn" :class="{ faved: favoriteIdSet.has(item.id) }" @click.stop="toggleFavorite(item.id)">
-                      {{ favoriteIdSet.has(item.id) ? '已收藏' : '收藏' }}
-                    </button>
-                  </div>
-                  <p class="card-desc">{{ item.description }}</p>
-                  <div class="card-meta">
-                    <span class="card-difficulty">{{ item.difficulty || '精选' }}</span>
-                    <span class="card-duration">{{ formatDuration(item.durationMinutes) }}</span>
-                  </div>
-                </div>
-              </article>
-            </div>
+            <TutorialGrid
+              :items="filteredTutorials"
+              :status="status"
+              :error="error"
+              :favorite-id-set="favoriteIdSet"
+              @open-detail="openTutorialDetail"
+              @toggle-favorite="toggleFavorite"
+            />
           </div>
 
-          <aside class="advice-panel page-lite">
-            <section class="weather-block">
-              <div class="panel-kicker">今日天气</div>
-              <div class="weather-info">
-                <span class="weather-icon">☀</span>
-                <div>
-                  <strong>晴转多云 22°C ~ 28°C</strong>
-                  <span class="weather-meta">湿度 65% · 微风 · 适合阳台养护</span>
-                </div>
-              </div>
-            </section>
-
-            <section class="suggestion-block">
-              <div class="panel-kicker">种植建议</div>
-              <div class="suggestion-list">
-                <div class="suggestion-item">
-                  <span class="suggestion-icon">🌱</span>
-                  <div>
-                    <strong>适合播种</strong>
-                    <p>生菜、罗勒和向日葵都适合当前温度段。</p>
-                  </div>
-                </div>
-                <div class="suggestion-item">
-                  <span class="suggestion-icon">💧</span>
-                  <div>
-                    <strong>浇水节奏</strong>
-                    <p>建议傍晚少量多次浇水，避免中午高温蒸发过快。</p>
-                  </div>
-                </div>
-                <div class="suggestion-item">
-                  <span class="suggestion-icon">📝</span>
-                  <div>
-                    <strong>本周任务</strong>
-                    <p>检查育苗盆通风情况，及时间苗，避免幼苗徒长。</p>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </aside>
+          <TutorialAdvicePanel />
         </div>
       </main>
     </div>
 
     <FloatingBall icon="🤖" color="#80ab64" :popup-width="380" :popup-height="500">
-      <TutorialAiChat :messages="chatMessages" :loading="chatSending" @send="sendChat" @clear="clearChat" />
+      <TutorialAiChat :messages="chat.chatMessages.value" :loading="chat.chatSending.value" @send="chat.sendChat" @clear="chat.clearChat" />
     </FloatingBall>
   </AppLayout>
 </template>
@@ -112,8 +48,11 @@ import { useRouter } from 'vue-router'
 import AppLayout from '../../../layouts/AppLayout.vue'
 import FloatingBall from '../../../shared/components/FloatingBall.vue'
 import TutorialAiChat from '../components/tutorial/TutorialAiChat.vue'
-import { aiChat, fetchTutorials, type AiChatMessage, type TutorialItem } from '../api'
+import TutorialGrid from '../components/tutorial/TutorialGrid.vue'
+import TutorialAdvicePanel from '../components/tutorial/TutorialAdvicePanel.vue'
+import { fetchTutorials, type TutorialItem } from '../api'
 import { useBuyerFavoritesStore } from '../stores/useBuyerFavoritesStore'
+import { useTutorialChat } from '../composables/useTutorialChat'
 
 const categories = [
   { key: 'all', icon: '📘', label: '全部教程' },
@@ -135,29 +74,7 @@ const tutorials = ref<TutorialItem[]>([])
 const favoritesStore = useBuyerFavoritesStore()
 const favoriteIdSet = computed(() => favoritesStore.tutorialIdSet)
 const router = useRouter()
-
-type ChatRole = 'user' | 'assistant'
-type ChatMsg = { id: number; role: ChatRole; content: string }
-
-const chatSending = ref(false)
-const chatMessages = ref<ChatMsg[]>([])
-
-function formatDuration(durationMinutes: number | null) {
-  return durationMinutes ? `${durationMinutes} 分钟` : '图文教程'
-}
-
-function getCategoryLabel(code: string | null) {
-  const map: Record<string, string> = {
-    seed: '播种入门',
-    care: '日常养护',
-    pest: '病虫防治',
-    advanced: '进阶技巧',
-    seasonal: '四季指南',
-    tool: '工具推荐'
-  }
-  if (!code) return '全部教程'
-  return map[code] || code
-}
+const chat = useTutorialChat()
 
 function toggleFavorite(id: number) {
   favoritesStore.toggleTutorial(id)
@@ -213,34 +130,6 @@ const filteredTutorials = computed(() => {
 onMounted(() => {
   loadTutorials()
 })
-
-async function sendChat(text: string) {
-  if (!text || chatSending.value) return
-
-  const idBase = Date.now()
-  chatMessages.value.push({ id: idBase, role: 'user', content: text })
-  chatSending.value = true
-  try {
-    const payload: AiChatMessage[] = [
-      {
-        role: 'system',
-        content: '你是家庭种植助手，请给出简洁且可执行的步骤建议。'
-      },
-      ...chatMessages.value.map((m) => ({ role: m.role, content: m.content } as AiChatMessage))
-    ]
-    const res = await aiChat(payload)
-    chatMessages.value.push({ id: idBase + 1, role: 'assistant', content: res.content })
-  } catch (err: any) {
-    const msg = err?.response?.data?.message || err?.message || 'AI 请求失败'
-    chatMessages.value.push({ id: idBase + 1, role: 'assistant', content: `提示：${msg}` })
-  } finally {
-    chatSending.value = false
-  }
-}
-
-function clearChat() {
-  chatMessages.value = []
-}
 </script>
 
 <style scoped>
@@ -302,14 +191,12 @@ function clearChat() {
 }
 
 .tutorial-sidebar::-webkit-scrollbar,
-.hero-main::-webkit-scrollbar,
-.advice-panel::-webkit-scrollbar {
+.hero-main::-webkit-scrollbar {
   width: 8px;
 }
 
 .tutorial-sidebar::-webkit-scrollbar-thumb,
-.hero-main::-webkit-scrollbar-thumb,
-.advice-panel::-webkit-scrollbar-thumb {
+.hero-main::-webkit-scrollbar-thumb {
   background: #d2e3d6;
   border-radius: 999px;
 }
@@ -326,102 +213,11 @@ function clearChat() {
 .hero-main {
   display: grid;
   gap: 14px;
+  align-content: start;
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
   padding-right: 6px;
-}
-
-.advice-panel {
-  display: grid;
-  gap: 16px;
-  align-content: start;
-  background: linear-gradient(180deg, #fbfefb, #f5fbf6);
-  width: 100%;
-  max-width: 260px;
-  justify-self: end;
-  min-height: 0;
-  max-height: 100%;
-  overflow-y: auto;
-  padding-right: 6px;
-}
-
-.panel-kicker {
-  font-size: 12px;
-  font-weight: 700;
-  color: #1f7a41;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.weather-block,
-.suggestion-block {
-  display: grid;
-  gap: 10px;
-}
-
-.weather-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 14px;
-  background: #f8fcf8;
-  border: 1px solid #e4efe6;
-}
-
-.weather-icon {
-  font-size: 24px;
-}
-
-.weather-info strong {
-  display: block;
-  color: #1f2937;
-}
-
-.weather-meta {
-  display: block;
-  margin-top: 4px;
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.suggestion-list {
-  display: grid;
-  gap: 10px;
-}
-
-.suggestion-item {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 10px;
-  align-items: start;
-  padding: 12px;
-  border-radius: 14px;
-  background: #fff;
-  border: 1px solid #e4efe6;
-}
-
-.suggestion-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #edf9ef;
-  color: #1f7a41;
-}
-
-.suggestion-item strong {
-  color: #1f2937;
-}
-
-.suggestion-item p {
-  margin: 4px 0 0;
-  color: #6b7280;
-  font-size: 13px;
-  line-height: 1.6;
 }
 
 .search-bar {
@@ -441,100 +237,6 @@ function clearChat() {
   font-size: 14px;
 }
 
-.tutorial-grid {
-  column-width: 260px;
-  column-gap: 14px;
-}
-
-.tutorial-card {
-  display: inline-block;
-  width: 100%;
-  gap: 0;
-  padding: 0;
-  overflow: hidden;
-  cursor: pointer;
-  transition: box-shadow 0.2s;
-  margin: 0 0 14px;
-  break-inside: avoid;
-  -webkit-column-break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.tutorial-card:hover { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); }
-
-.card-media {
-  position: relative;
-  height: 142px;
-  overflow: hidden;
-}
-
-.card-media img,
-.card-media video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.card-body { padding: 0 16px 16px; display: grid; gap: 8px; }
-.card-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.card-chip {
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #466052;
-  background: #edf3ef;
-}
-.category-chip {
-  color: #1f7a41;
-  background: #e7f5ec;
-}
-.card-title { margin: 0; font-size: 16px; color: #1f2937; }
-
-.card-title-row { display: flex; justify-content: space-between; align-items: start; gap: 6px; }
-
-.fav-btn {
-  border-radius: 999px;
-  border: 1px solid #dbe7dd;
-  background: #f8fbf8;
-  color: #55735f;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.fav-btn.faved {
-  border-color: #ffccd5;
-  background: #fff2f4;
-  color: #d14863;
-}
-
-.fav-btn:hover { opacity: 0.9; }
-.card-desc { margin: 0; font-size: 13px; color: #6b7280; line-height: 1.6; }
-
-.card-meta {
-  display: flex;
-  gap: 10px;
-  font-size: 12px;
-}
-
-.card-difficulty {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #e6f4ea;
-  color: #1f7a41;
-  font-weight: 600;
-}
-
-.card-duration { color: #9ca3af; line-height: 1.8; }
-
-.empty-state { text-align: center; padding: 40px 16px; }
-.empty-hint { color: #9ca3af; margin: 0; }
-
 @media (max-width: 1100px) {
   .tutorial-shell {
     grid-template-columns: 190px minmax(0, 1fr);
@@ -542,15 +244,6 @@ function clearChat() {
 
   .hero-row {
     grid-template-columns: 1fr;
-  }
-
-  .advice-panel {
-    max-width: none;
-    justify-self: stretch;
-  }
-
-  .tutorial-grid {
-    column-width: 240px;
   }
 }
 
@@ -577,18 +270,10 @@ function clearChat() {
     height: auto;
   }
 
-  .hero-main,
-  .advice-panel {
+  .hero-main {
     overflow: visible;
     max-height: none;
     padding-right: 0;
-  }
-}
-
-@media (max-width: 680px) {
-  .tutorial-grid {
-    column-count: 1;
-    column-width: auto;
   }
 }
 </style>

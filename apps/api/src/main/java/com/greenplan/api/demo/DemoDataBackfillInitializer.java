@@ -263,9 +263,9 @@ public class DemoDataBackfillInitializer {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             Order order = new Order();
-            order.setOrderNo("GP" + (202604100001L + index));
+            order.setOrderNo("GP" + System.currentTimeMillis());
             order.setBuyerId(buyerId);
-            order.setStatus(index < 5 ? com.greenplan.api.common.OrderStatus.PAID : com.greenplan.api.common.OrderStatus.PAID);
+            order.setStatus(com.greenplan.api.common.OrderStatus.PAID);
             order.setTotalAmount(totalAmount);
             order.setShippingCarrier(index < 4 ? "顺丰速运" : null);
             order.setTrackingNo(index < 4 ? "SF20260417" + (100 + index) : null);

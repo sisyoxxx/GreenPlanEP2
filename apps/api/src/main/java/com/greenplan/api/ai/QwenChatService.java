@@ -1,5 +1,6 @@
 package com.greenplan.api.ai;
 
+import com.greenplan.api.common.exception.BusinessException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -28,7 +29,7 @@ public class QwenChatService {
 
     public String chat(List<AiChatMessage> messages) {
         if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalArgumentException("未配置通义千问 API Key，请设置环境变量 DASHSCOPE_API_KEY 或配置 app.qwen.api-key");
+            throw new BusinessException("未配置通义千问 API Key，请设置环境变量 DASHSCOPE_API_KEY 或配置 app.qwen.api-key");
         }
 
         DashScopeChatRequest payload = new DashScopeChatRequest(model, messages);
@@ -43,12 +44,12 @@ public class QwenChatService {
                 .body(DashScopeChatResponse.class);
 
         if (response == null || response.choices() == null || response.choices().isEmpty()) {
-            throw new IllegalArgumentException("AI 返回为空");
+            throw new BusinessException("AI 返回为空");
         }
 
         DashScopeChatResponse.Choice choice = response.choices().getFirst();
         if (choice == null || choice.message() == null || choice.message().content() == null) {
-            throw new IllegalArgumentException("AI 返回解析失败");
+            throw new BusinessException("AI 返回解析失败");
         }
         return choice.message().content();
     }

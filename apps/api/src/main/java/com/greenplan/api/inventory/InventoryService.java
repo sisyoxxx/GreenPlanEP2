@@ -4,6 +4,8 @@ import com.greenplan.api.auth.RoleCode;
 import com.greenplan.api.catalog.Product;
 import com.greenplan.api.catalog.ProductRepository;
 import com.greenplan.api.common.AuthorizationAssert;
+import com.greenplan.api.common.exception.BusinessException;
+import com.greenplan.api.common.exception.ResourceNotFoundException;
 import com.greenplan.api.security.JwtUserPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,11 +77,11 @@ public class InventoryService {
     public void updateWarningThreshold(WarningThresholdRequest request, JwtUserPrincipal principal) {
         AuthorizationAssert.requireRole(principal, RoleCode.INVENTORY_MANAGER, "无权限设置库存预警阈值");
         if (request.warningThreshold() < 0) {
-            throw new IllegalArgumentException("预警阈值不能为负数");
+            throw new BusinessException("预警阈值不能为负数");
         }
 
         InventoryItem item = inventoryItemRepository.findByProductId(request.productId())
-                .orElseThrow(() -> new IllegalArgumentException("库存记录不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("库存记录不存在"));
         item.setWarningThreshold(request.warningThreshold());
         inventoryItemRepository.save(item);
     }
@@ -88,7 +90,7 @@ public class InventoryService {
     public void inbound(InventoryInboundRequest request, JwtUserPrincipal principal) {
         AuthorizationAssert.requireRole(principal, RoleCode.INVENTORY_MANAGER, "无权限入库");
         if (request.quantity() <= 0) {
-            throw new IllegalArgumentException("入库数量必须大于 0");
+            throw new BusinessException("入库数量必须大于 0");
         }
 
         InventoryItem item = inventoryItemRepository.findByProductId(request.productId())
@@ -116,7 +118,7 @@ public class InventoryService {
 
     private InventoryItem createInventoryItem(Long productId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("商品不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("商品不存在"));
 
         InventoryItem item = new InventoryItem();
         item.setProduct(product);

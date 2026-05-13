@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <AppLayout>
     <div class="community-shell">
       <CommunitySidebar
@@ -8,7 +8,7 @@
         :selected-topic="selectedTopic"
         :topic-options="topicOptions"
         :active-inbox="activeInbox"
-        :direct-conversation-count="directConversationCount"
+        :direct-conversation-count="directChat.directConversationCount.value"
         :reply-count="replyNotifications.length"
         :like-count="likeNotifications.length"
         @toggle-compose-mode="toggleComposeMode"
@@ -19,101 +19,65 @@
       />
 
       <main ref="mainRef" class="community-main">
-        <section v-if="isComposeMode" class="page-lite compose-panel">
-          <h3>发布新帖</h3>
-          <p class="muted">{{ isAdmin ? '管理员发布会自动归类为“官方活动”。' : '可选分类：种植经验、求助问答、成果展示。' }}</p>
-          <select v-model="draft.topic" :disabled="isAdmin">
-            <option v-for="topic in draftTopicOptions" :key="topic" :value="topic">{{ topic }}</option>
-          </select>
-          <input v-model.trim="draft.title" placeholder="标题" />
-          <textarea v-model.trim="draft.content" rows="5" placeholder="内容"></textarea>
-          <div class="upload-row">
-            <button class="secondary-btn" @click="triggerImageUpload">选择图片</button>
-            <button v-if="draftImageUrl" class="secondary-btn" @click="removeDraftImage">移除图片</button>
-            <input ref="draftImageInput" class="hidden-input" type="file" accept="image/*" @change="handleDraftImageChange" />
-          </div>
-          <img v-if="draftImageUrl" class="draft-image" :src="draftImageUrl" :alt="draftImageName || '帖子图片'" />
-          <div class="row">
-            <button class="secondary-btn" @click="resetDraft">清空</button>
-            <button @click="submitDraft">发布</button>
-          </div>
-          <p v-if="message" class="message">{{ message }}</p>
-        </section>
+        <CommunityComposeModal
+          :open="isComposeMode"
+          :is-admin="isAdmin"
+          @close="setTab('all')"
+          @submit="submitDraft"
+        />
 
-        <template v-else>
-          <div class="page-lite community-search">
-            <input v-model.trim="rightKeyword" type="text" placeholder="搜索帖子、作者或消息内容" />
-          </div>
+        <CommunityEditModal
+          :open="editingPostId !== null"
+          :post="editingPost"
+          @close="cancelEdit"
+          @submit="submitEdit"
+        />
 
-          <CommunityAnnouncementBar ref="announcementBarRef" :announcements="announcements" />
+        <div class="page-lite community-search">
+          <input v-model.trim="rightKeyword" type="text" placeholder="搜索帖子、作者或消息内容" />
+        </div>
 
-          <CommunityInboxPanel
-            v-if="activeTab === 'inbox'"
-            :active-inbox="activeInbox"
-            :inbox-title="inboxTitle"
-            :inbox-hint="inboxHint"
-            :active-conversation="activeConversation"
-            :filtered-conversations="filteredConversations"
-            :chat-draft="chatDraft"
-            :active-inbox-items="activeInboxItems"
-            @open-direct-chat="openDirectChat"
-            @back-to-inbox-list="backToInboxList"
-            @send-direct-message="sendDirectMessage"
-            @update-chat-draft="chatDraft = $event"
-          />
+        <CommunityAnnouncementBar ref="announcementBarRef" :announcements="announcements" />
 
-          <div v-if="(activeTab === 'my' || activeTab === 'favorites') && filteredPosts.length === 0" class="page-lite muted">
-            {{ activeTab === 'my' ? '暂无我的帖子' : '暂无收藏的帖子' }}
-          </div>
+        <CommunityInboxPanel
+          v-if="activeTab === 'inbox'"
+          :active-inbox="activeInbox"
+          :inbox-title="inboxTitle"
+          :inbox-hint="inboxHint"
+          :active-conversation="directChat.activeConversation.value"
+          :filtered-conversations="directChat.filteredConversations.value"
+          :chat-draft="directChat.chatDraft.value"
+          :active-inbox-items="activeInboxItems"
+          @open-direct-chat="directChat.openDirectChat"
+          @back-to-inbox-list="directChat.backToInboxList"
+          @send-direct-message="directChat.sendDirectMessage"
+          @update-chat-draft="directChat.chatDraft.value = $event"
+        />
 
-          <!-- 我的帖子：列表形式，带编辑/删除 -->
-          <section v-if="activeTab === 'my' && filteredPosts.length > 0" class="my-post-list">
-            <article v-for="post in filteredPosts" :key="post.id" class="my-post-item page-lite">
-              <div class="my-post-main" @click="openPostDetail(post.id)">
-                <div class="my-post-head">
-                  <span class="tag">{{ post.topic }}</span>
-                  <span class="muted">{{ post.time }}</span>
-                </div>
-                <h4>{{ post.title }}</h4>
-                <p class="my-post-excerpt">{{ post.content.slice(0, 120) }}{{ post.content.length > 120 ? '...' : '' }}</p>
-              </div>
-              <div class="my-post-actions">
-                <button class="secondary-btn" @click.stop="startEdit(post)">编辑</button>
-                <button class="danger-btn" @click.stop="confirmDelete(post)">删除</button>
-              </div>
-            </article>
-          </section>
+        <div v-if="(activeTab === 'my' || activeTab === 'favorites') && filteredPosts.length === 0" class="page-lite muted">
+          {{ activeTab === 'my' ? '暂无我的帖子' : '暂无收藏的帖子' }}
+        </div>
 
-          <!-- 编辑面板 -->
-          <section v-if="editingPostId !== null" class="page-lite compose-panel">
-            <h3>编辑帖子</h3>
-            <select v-model="editDraft.topic">
-              <option v-for="topic in buyerTopicOptions" :key="topic" :value="topic">{{ topic }}</option>
-            </select>
-            <input v-model.trim="editDraft.title" placeholder="标题" />
-            <textarea v-model.trim="editDraft.content" rows="5" placeholder="内容"></textarea>
-            <div class="row">
-              <button class="secondary-btn" @click="cancelEdit">取消</button>
-              <button @click="submitEdit">保存</button>
-            </div>
-            <p v-if="message" class="message">{{ message }}</p>
-          </section>
+        <CommunityMyPostList
+          v-if="activeTab === 'my' && filteredPosts.length > 0"
+          :posts="filteredPosts"
+          @open-post-detail="openPostDetail"
+          @edit="startEdit"
+          @delete="confirmDelete"
+        />
 
-          <!-- 我的收藏/全部：瀑布流 -->
-          <CommunityPostList
-            v-if="activeTab !== 'inbox' && activeTab !== 'my'"
-            :posts="filteredPosts"
-            :favorite-post-id-set="favoritePostIdSet"
-            :comment-counts="commentCounts"
-            :show-empty="filteredPosts.length === 0"
-            :empty-text="activeTab === 'favorites' ? '暂无收藏的帖子' : '暂无内容'"
-            @open-post-detail="openPostDetail"
-            @like="like"
-            @toggle-favorite="toggleFavorite"
-            @prefill-reply="prefillReply"
-            @prefill-message="prefillMessage"
-          />
-        </template>
+        <CommunityPostList
+          v-if="activeTab !== 'inbox' && activeTab !== 'my'"
+          :posts="filteredPosts"
+          :favorite-post-id-set="favoritePostIdSet"
+          :show-empty="filteredPosts.length === 0"
+          :empty-text="activeTab === 'favorites' ? '暂无收藏的帖子' : '暂无内容'"
+          @open-post-detail="openPostDetail"
+          @like="like"
+          @toggle-favorite="toggleFavorite"
+          @prefill-reply="prefillReply"
+          @prefill-message="prefillMessage"
+        />
       </main>
 
       <aside v-if="selectedPostId !== null" class="community-detail-panel page-lite">
@@ -124,35 +88,27 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import AppLayout from '../../../layouts/AppLayout.vue'
 import { fetchAnnouncements, updateCommunityPost, deleteCommunityPost, type AnnouncementItem } from '../api'
 import { useAuthStore } from '../../../core/auth/useAuthStore'
 import { useBuyerFavoritesStore } from '../stores/useBuyerFavoritesStore'
 import { useBuyerCommunityStore, type CommunityPostItem, type TopicCategory } from '../stores/useBuyerCommunityStore'
+import { useDirectChat } from '../composables/useDirectChat'
+import { useCommunityInbox } from '../composables/useCommunityInbox'
 import CommunityPostDetailPanel from '../components/community/CommunityPostDetailPanel.vue'
 import CommunitySidebar from '../components/community/CommunitySidebar.vue'
 import CommunityInboxPanel from '../components/community/CommunityInboxPanel.vue'
 import CommunityAnnouncementBar from '../components/community/CommunityAnnouncementBar.vue'
 import CommunityPostList from '../components/community/CommunityPostList.vue'
+import CommunityComposeModal from '../components/community/CommunityComposeModal.vue'
+import CommunityEditModal from '../components/community/CommunityEditModal.vue'
+import CommunityMyPostList from '../components/community/CommunityMyPostList.vue'
 
 type Tab = 'all' | 'my' | 'favorites' | 'inbox' | 'compose'
 type InboxType = 'message' | 'reply' | 'like'
-type InboxItem = { id: number; text: string; time: string }
-type ChatSender = 'me' | 'other'
-type DirectChatMessage = { id: number; sender: ChatSender; text: string; time: string }
-type DirectConversation = {
-  id: number
-  partner: string
-  preview: string
-  updatedAt: string
-  unread: number
-  messages: DirectChatMessage[]
-}
 
-const DIRECT_CHAT_STORAGE_KEY = 'gp2_buyer_direct_chats'
 const topicOptions: TopicCategory[] = ['种植经验', '求助问答', '成果展示', '官方活动']
-const buyerTopicOptions: TopicCategory[] = ['种植经验', '求助问答', '成果展示']
 
 const activeTab = ref<Tab>('all')
 const activeInbox = ref<InboxType>('message')
@@ -161,8 +117,6 @@ const isTopicDropdownOpen = ref(false)
 const message = ref('')
 const rightKeyword = ref('')
 const announcements = ref<AnnouncementItem[]>([])
-const chatDraft = ref('')
-const activeConversationId = ref<number | null>(null)
 const selectedPostId = ref<number | null>(null)
 const announcementBarRef = ref<{ stopCarousel: () => void } | null>(null)
 const authStore = useAuthStore()
@@ -170,48 +124,14 @@ const favoritesStore = useBuyerFavoritesStore()
 const communityStore = useBuyerCommunityStore()
 const isAdmin = computed(() => authStore.role === 'ADMIN')
 const isComposeMode = computed(() => activeTab.value === 'compose')
-const draftTopicOptions = computed<TopicCategory[]>(() => (isAdmin.value ? ['官方活动'] : buyerTopicOptions))
 const favoritePostIdSet = computed(() => favoritesStore.postIdSet)
 
-const draft = reactive({ topic: '种植经验' as TopicCategory, title: '', content: '' })
-const draftImageInput = ref<HTMLInputElement | null>(null)
-const draftImageUrl = ref('')
-const draftImageName = ref('')
-
-const directConversations = ref<DirectConversation[]>(loadDirectConversations())
-const directConversationCount = computed(() => directConversations.value.length)
-const activeConversation = computed(() => directConversations.value.find((item) => item.id === activeConversationId.value) || null)
-const filteredConversations = computed(() => {
-  const kw = rightKeyword.value.trim().toLowerCase()
-  if (!kw) return directConversations.value
-  return directConversations.value.filter((item) => {
-    const msgText = item.messages.map((msg) => msg.text).join(' ')
-    return [item.partner, item.preview, item.updatedAt, msgText].some((text) => text.toLowerCase().includes(kw))
-  })
-})
-
-const replyNotifications = ref<InboxItem[]>([
-  { id: 1, text: '阳台番茄达人 回复了你：先补光，再适当降温。', time: '刚刚' }
-])
-const likeNotifications = ref<InboxItem[]>([
-  { id: 1, text: '你的帖子《第一次播种成功发芽了》新增 3 个赞。', time: '今天' }
-])
-
-const commentCounts = computed(() => {
-  const raw = safeParse<any[]>(localStorage.getItem('gp2_buyer_post_comments'), [])
-  if (!Array.isArray(raw)) return {} as Record<number, number>
-  const counts: Record<number, number> = {}
-  for (const item of raw) {
-    const postId = Number(item?.postId)
-    if (Number.isFinite(postId)) {
-      counts[postId] = (counts[postId] || 0) + 1
-    }
-  }
-  return counts
-})
+const directChat = useDirectChat(rightKeyword)
+const { replyNotifications, likeNotifications, activeInboxItems, inboxTitle, inboxHint, addReplyNotification } =
+  useCommunityInbox(rightKeyword, activeInbox)
 
 const editingPostId = ref<number | null>(null)
-const editDraft = reactive({ topic: '种植经验' as TopicCategory, title: '', content: '', imageUrl: '' })
+const editingPost = computed(() => communityStore.posts.find((p) => p.id === editingPostId.value) || null)
 
 const filteredPosts = computed(() => {
   let list = [...communityStore.posts]
@@ -228,21 +148,6 @@ const filteredPosts = computed(() => {
   }
 
   return list
-})
-
-const activeInboxItems = computed(() => {
-  let list: InboxItem[] = activeInbox.value === 'reply' ? replyNotifications.value : likeNotifications.value
-
-  const kw = rightKeyword.value.trim().toLowerCase()
-  if (!kw) return list
-  return list.filter((item) => item.text.toLowerCase().includes(kw) || item.time.toLowerCase().includes(kw))
-})
-
-const inboxTitle = computed(() => activeInbox.value === 'message' ? '私信消息' : activeInbox.value === 'reply' ? '评论回复' : '点赞消息')
-const inboxHint = computed(() => {
-  if (activeInbox.value === 'message') return '点击一条私信可在当前窗口进入聊天框，消息临时保存在浏览器本地。'
-  if (activeInbox.value === 'reply') return '这里显示帖子回复。'
-  return '这里显示点赞动态。'
 })
 
 onMounted(() => {
@@ -307,96 +212,23 @@ function toggleComposeMode() {
     return
   }
   activeTab.value = 'compose'
-  if (isAdmin.value) draft.topic = '官方活动'
 }
 
 function openInbox(type: string) {
   activeInbox.value = type as InboxType
   activeTab.value = 'inbox'
-  if (type !== 'message') activeConversationId.value = null
+  if (type !== 'message') directChat.activeConversationId.value = null
 }
 
-function openDirectChat(conversationId: number) {
-  activeTab.value = 'inbox'
-  activeInbox.value = 'message'
-  activeConversationId.value = conversationId
-  const target = directConversations.value.find((item) => item.id === conversationId)
-  if (!target) return
-  target.unread = 0
-  persistDirectConversations()
-}
-
-function backToInboxList() {
-  activeConversationId.value = null
-}
-
-function sendDirectMessage() {
-  const text = chatDraft.value.trim()
-  const conversation = activeConversation.value
-  if (!text || !conversation) return
-
-  conversation.messages.push({
-    id: Date.now(),
-    sender: 'me',
-    text,
-    time: formatNow()
-  })
-  conversation.preview = text
-  conversation.updatedAt = formatNow()
-  conversation.unread = 0
-  moveConversationToTop(conversation.id)
-  persistDirectConversations()
-  chatDraft.value = ''
-}
-
-function triggerImageUpload() {
-  draftImageInput.value?.click()
-}
-
-async function handleDraftImageChange(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  removeDraftImage()
-  draftImageUrl.value = await readFileAsDataUrl(file)
-  draftImageName.value = file.name
-}
-
-function removeDraftImage() {
-  draftImageUrl.value = ''
-  draftImageName.value = ''
-  if (draftImageInput.value) draftImageInput.value.value = ''
-}
-
-function resetDraft() {
-  draft.topic = isAdmin.value ? '官方活动' : '种植经验'
-  draft.title = ''
-  draft.content = ''
-  message.value = ''
-  removeDraftImage()
-}
-
-function submitDraft() {
-  if (!draft.title || !draft.content) {
-    message.value = '请填写标题和内容'
-    return
-  }
-
-  const topic: TopicCategory = isAdmin.value
-    ? '官方活动'
-    : buyerTopicOptions.includes(draft.topic) ? draft.topic : '种植经验'
-
-  communityStore.addPost({
-    topic,
-    title: draft.title,
-    content: draft.content,
-    imageUrl: draftImageUrl.value || null
-  }).then(() => {
-    resetDraft()
-    message.value = '帖子已发布'
-    activeTab.value = 'all'
-  }).catch((err: any) => {
-    message.value = err?.response?.data?.message || '发布失败'
-  })
+function submitDraft(payload: { topic: TopicCategory; title: string; content: string; imageUrl: string | null }) {
+  communityStore.addPost(payload)
+    .then(() => {
+      message.value = '帖子已发布'
+      activeTab.value = 'all'
+    })
+    .catch((err: any) => {
+      message.value = err?.response?.data?.message || '发布失败'
+    })
 }
 
 function like(postId: number) {
@@ -419,19 +251,23 @@ function toggleFavorite(post: CommunityPostItem) {
 function prefillReply(post: CommunityPostItem) {
   activeTab.value = 'inbox'
   activeInbox.value = 'reply'
-  activeConversationId.value = null
-  replyNotifications.value.unshift({ id: Date.now(), text: `你回复了帖子：${post.title}`, time: '刚刚' })
+  directChat.activeConversationId.value = null
+  addReplyNotification(`你回复了帖子：${post.title}`)
 }
 
 function prefillMessage(post: CommunityPostItem) {
   activeTab.value = 'inbox'
   activeInbox.value = 'message'
   const text = `你好，想和你交流一下帖子《${post.title}》`
-  const conversationId = appendConversationMessage(post.author, text, 'me')
-  openDirectChat(conversationId)
+  const conversationId = directChat.appendConversationMessage(post.author, text, 'me')
+  directChat.openDirectChat(conversationId)
 }
 
 function openPostDetail(postId: number) {
+  if (selectedPostId.value === postId) {
+    closePostDetail()
+    return
+  }
   selectedPostId.value = postId
 }
 
@@ -441,33 +277,16 @@ function closePostDetail() {
 
 function startEdit(post: CommunityPostItem) {
   editingPostId.value = post.id
-  editDraft.topic = post.topic
-  editDraft.title = post.title
-  editDraft.content = post.content
-  editDraft.imageUrl = post.imageUrl || ''
   message.value = ''
 }
 
 function cancelEdit() {
   editingPostId.value = null
-  editDraft.title = ''
-  editDraft.content = ''
-  editDraft.imageUrl = ''
 }
 
-async function submitEdit() {
-  if (!editDraft.title || !editDraft.content) {
-    message.value = '请填写标题和内容'
-    return
-  }
-  if (!editingPostId.value) return
+async function submitEdit(id: number, payload: { topic: TopicCategory; title: string; content: string; imageUrl: string | null }) {
   try {
-    await updateCommunityPost(editingPostId.value, {
-      topic: editDraft.topic,
-      title: editDraft.title,
-      content: editDraft.content,
-      imageUrl: editDraft.imageUrl || null
-    })
+    await updateCommunityPost(id, payload)
     await communityStore.loadPosts()
     editingPostId.value = null
     message.value = '帖子已更新'
@@ -484,129 +303,6 @@ async function confirmDelete(post: CommunityPostItem) {
     message.value = '帖子已删除'
   } catch (err: any) {
     message.value = err?.response?.data?.message || '删除失败'
-  }
-}
-
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result || ''))
-    reader.onerror = () => reject(new Error('读取图片失败'))
-    reader.readAsDataURL(file)
-  })
-}
-
-function appendConversationMessage(partner: string, text: string, sender: ChatSender) {
-  let conversation = directConversations.value.find((item) => item.partner === partner)
-  if (!conversation) {
-    conversation = {
-      id: Date.now(),
-      partner,
-      preview: '',
-      updatedAt: formatNow(),
-      unread: 0,
-      messages: []
-    }
-    directConversations.value = [conversation, ...directConversations.value]
-  }
-
-  conversation.messages.push({
-    id: Date.now() + Math.floor(Math.random() * 1000),
-    sender,
-    text,
-    time: formatNow()
-  })
-  conversation.preview = text
-  conversation.updatedAt = formatNow()
-  if (sender === 'other') conversation.unread += 1
-  moveConversationToTop(conversation.id)
-  persistDirectConversations()
-  return conversation.id
-}
-
-function moveConversationToTop(conversationId: number) {
-  const target = directConversations.value.find((item) => item.id === conversationId)
-  if (!target) return
-  directConversations.value = [target, ...directConversations.value.filter((item) => item.id !== conversationId)]
-}
-
-function persistDirectConversations() {
-  localStorage.setItem(DIRECT_CHAT_STORAGE_KEY, JSON.stringify(directConversations.value))
-}
-
-function loadDirectConversations(): DirectConversation[] {
-  const raw = safeParse<any[]>(localStorage.getItem(DIRECT_CHAT_STORAGE_KEY), [])
-  if (!Array.isArray(raw) || raw.length === 0) return defaultConversations()
-
-  const normalized = raw.map((item) => normalizeConversation(item)).filter((item): item is DirectConversation => !!item)
-  if (normalized.length === 0) return defaultConversations()
-  return normalized
-}
-
-function normalizeConversation(raw: any): DirectConversation | null {
-  const id = Number(raw?.id)
-  if (!Number.isFinite(id)) return null
-  const messagesRaw = Array.isArray(raw?.messages) ? raw.messages : []
-  const messages = messagesRaw
-    .map((msg: any) => {
-      const msgId = Number(msg?.id)
-      if (!Number.isFinite(msgId)) return null
-      const sender: ChatSender = msg?.sender === 'other' ? 'other' : 'me'
-      return {
-        id: msgId,
-        sender,
-        text: String(msg?.text || ''),
-        time: String(msg?.time || '')
-      }
-    })
-    .filter((msg: DirectChatMessage | null): msg is DirectChatMessage => !!msg)
-
-  return {
-    id,
-    partner: String(raw?.partner || '社区好友'),
-    preview: String(raw?.preview || ''),
-    updatedAt: String(raw?.updatedAt || ''),
-    unread: Math.max(0, Number(raw?.unread) || 0),
-    messages
-  }
-}
-
-function defaultConversations(): DirectConversation[] {
-  return [
-    {
-      id: 1,
-      partner: '阳台番茄达人',
-      preview: '你昨天问的补光灯型号我发你了。',
-      updatedAt: '刚刚',
-      unread: 1,
-      messages: [
-        { id: 101, sender: 'other', text: '你昨天问的补光灯型号我发你了。', time: '刚刚' }
-      ]
-    },
-    {
-      id: 2,
-      partner: '厨房花园君',
-      preview: '薄荷打顶后恢复很快，记得两天后追肥。',
-      updatedAt: '今天',
-      unread: 0,
-      messages: [
-        { id: 201, sender: 'other', text: '薄荷打顶后恢复很快，记得两天后追肥。', time: '今天' }
-      ]
-    }
-  ]
-}
-
-function formatNow() {
-  const now = new Date()
-  return now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
-}
-
-function safeParse<T>(value: string | null, fallback: T): T {
-  if (!value) return fallback
-  try {
-    return JSON.parse(value) as T
-  } catch {
-    return fallback
   }
 }
 </script>
@@ -638,129 +334,18 @@ function safeParse<T>(value: string | null, fallback: T): T {
   overflow-y: auto;
 }
 
-.compose-panel {
-  display: grid;
-  gap: 10px;
-}
-
-.community-search input,
-.compose-panel input,
-.compose-panel textarea,
-.compose-panel select {
+.community-search input {
   width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #e6f0e8;
+  background: #fff;
+  font-size: 14px;
+  outline: none;
 }
-
-.upload-row,
-.row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.hidden-input {
-  display: none;
-}
-
-.draft-image {
-  width: 100%;
-  max-height: 220px;
-  object-fit: cover;
-  border-radius: 12px;
-}
-
-
 
 .muted {
   color: #6b7280;
-}
-
-.message {
-  color: #1f7a41;
-  margin: 0;
-}
-
-.secondary-btn {
-  background: #f2f6f2;
-  border: 1px solid #e3e8e3;
-  color: #1f2937;
-}
-
-.secondary-btn.active {
-  border-color: #9ad3aa;
-  background: #edf9ef;
-  color: #1f7a41;
-}
-
-.my-post-list {
-  display: grid;
-  gap: 10px;
-}
-
-.my-post-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 14px;
-  cursor: pointer;
-  transition: transform 0.16s ease, box-shadow 0.16s ease;
-}
-
-.my-post-item:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(21, 56, 35, 0.08);
-}
-
-.my-post-main {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  gap: 6px;
-}
-
-.my-post-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.my-post-main h4 {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.4;
-  color: #1f2937;
-}
-
-.my-post-excerpt {
-  margin: 0;
-  font-size: 13px;
-  color: #6b7280;
-  line-height: 1.5;
-}
-
-.my-post-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-}
-
-.danger-btn {
-  border-color: #f2cbcb;
-  color: #b42318;
-  background: #fff7f7;
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid #f2cbcb;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-@media (max-width: 1280px) {
-  .post-list {
-    column-width: 220px;
-    column-gap: 10px;
-  }
 }
 
 @media (max-width: 1100px) {

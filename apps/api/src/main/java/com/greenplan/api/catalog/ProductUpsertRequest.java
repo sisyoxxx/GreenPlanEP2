@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public record ProductUpsertRequest(
-        @NotBlank String sku,
+        String sku,
         @NotBlank String name,
         String description,
         @NotNull @DecimalMin("0.01") BigDecimal price,

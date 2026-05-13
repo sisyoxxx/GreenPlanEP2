@@ -1,14 +1,16 @@
 package com.greenplan.api.planting;
 
 import com.greenplan.api.common.ApiResponse;
-import com.greenplan.api.security.JwtUserPrincipal;
+import com.greenplan.api.common.exception.BusinessException;
+import com.greenplan.api.common.exception.ResourceNotFoundException;
+import com.greenplan.api.security.SecurityUtils;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,19 +29,22 @@ public class PlantingDiaryController {
     private final PlantingDiaryService plantingDiaryService;
     private final Path uploadDir;
 
-    public PlantingDiaryController(PlantingDiaryService plantingDiaryService) {
+    public PlantingDiaryController(
+            PlantingDiaryService plantingDiaryService,
+            @Value("${app.upload.dir:D:/tool/aLemon/vue/GreenPlanEP2/uploads}") String uploadDirPath
+    ) {
         this.plantingDiaryService = plantingDiaryService;
-        this.uploadDir = Paths.get("D:/tool/aLemon/vue/GreenPlanEP2/uploads");
+        this.uploadDir = Paths.get(uploadDirPath);
         try {
             Files.createDirectories(uploadDir);
         } catch (IOException e) {
-            throw new RuntimeException("无法创建上传目录", e);
+            throw new RuntimeException("无法创建上传目录: " + uploadDir, e);
         }
     }
 
     @GetMapping("/planting-diaries")
-    public ApiResponse<List<PlantingDiaryDto>> listDiaries(Authentication authentication) {
-        Long userId = extractUserId(authentication);
+    public ApiResponse<List<PlantingDiaryDto>> listDiaries() {
+        Long userId = SecurityUtils.currentUserId();
         if (userId == null) {
             return ApiResponse.ok(List.of());
         }
@@ -47,29 +52,20 @@ public class PlantingDiaryController {
     }
 
     @PostMapping("/planting-diaries")
-    public ApiResponse<PlantingDiaryDto> create(@Valid @RequestBody CreatePlantingDiaryRequest request, Authentication authentication) {
-        Long userId = extractUserId(authentication);
-        if (userId == null) {
-            throw new IllegalArgumentException("请先登录");
-        }
+    public ApiResponse<PlantingDiaryDto> create(@Valid @RequestBody CreatePlantingDiaryRequest request) {
+        Long userId = SecurityUtils.requireUserId();
         return ApiResponse.ok("Diary created", plantingDiaryService.create(request, userId));
     }
 
     @PutMapping("/planting-diaries/{id}")
-    public ApiResponse<PlantingDiaryDto> update(@PathVariable Long id, @Valid @RequestBody CreatePlantingDiaryRequest request, Authentication authentication) {
-        Long userId = extractUserId(authentication);
-        if (userId == null) {
-            throw new IllegalArgumentException("请先登录");
-        }
+    public ApiResponse<PlantingDiaryDto> update(@PathVariable Long id, @Valid @RequestBody CreatePlantingDiaryRequest request) {
+        Long userId = SecurityUtils.requireUserId();
         return ApiResponse.ok("Diary updated", plantingDiaryService.update(id, request, userId));
     }
 
     @DeleteMapping("/planting-diaries/{id}")
-    public ApiResponse<Void> delete(@PathVariable Long id, Authentication authentication) {
-        Long userId = extractUserId(authentication);
-        if (userId == null) {
-            throw new IllegalArgumentException("请先登录");
-        }
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        Long userId = SecurityUtils.requireUserId();
         plantingDiaryService.delete(id, userId);
         return ApiResponse.ok("Diary deleted");
     }
@@ -97,7 +93,7 @@ public class PlantingDiaryController {
             Path filePath = uploadDir.resolve(filename).normalize();
             Resource resource = new UrlResource(filePath.toUri());
             if (!resource.exists() || !resource.isReadable()) {
-                return ResponseEntity.notFound().build();
+                throw new ResourceNotFoundException("图片不存在");
             }
             String contentType = Files.probeContentType(filePath);
             if (contentType == null) {
@@ -108,16 +104,7 @@ public class PlantingDiaryController {
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
                     .body(resource);
         } catch (IOException e) {
-            return ResponseEntity.notFound().build();
+            throw new ResourceNotFoundException("图片不存在");
         }
-    }
-
-    private Long extractUserId(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) return null;
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof JwtUserPrincipal) {
-            return ((JwtUserPrincipal) principal).getId();
-        }
-        return null;
     }
 }

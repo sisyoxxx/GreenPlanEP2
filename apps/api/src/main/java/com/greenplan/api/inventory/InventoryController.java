@@ -1,9 +1,8 @@
 package com.greenplan.api.inventory;
 
 import com.greenplan.api.common.ApiResponse;
-import com.greenplan.api.security.JwtUserPrincipal;
+import com.greenplan.api.security.SecurityUtils;
 import jakarta.validation.Valid;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,14 +30,14 @@ public class InventoryController {
     }
 
     @PatchMapping("/warnings")
-    public ApiResponse<Void> updateWarning(@Valid @RequestBody WarningThresholdRequest request, Authentication authentication) {
-        inventoryService.updateWarningThreshold(request, (JwtUserPrincipal) authentication.getPrincipal());
+    public ApiResponse<Void> updateWarning(@Valid @RequestBody WarningThresholdRequest request) {
+        inventoryService.updateWarningThreshold(request, SecurityUtils.requirePrincipal());
         return ApiResponse.ok("预警阈值已更新");
     }
 
     @PostMapping("/inbound")
-    public ApiResponse<Void> inbound(@Valid @RequestBody InventoryInboundRequest request, Authentication authentication) {
-        inventoryService.inbound(request, (JwtUserPrincipal) authentication.getPrincipal());
+    public ApiResponse<Void> inbound(@Valid @RequestBody InventoryInboundRequest request) {
+        inventoryService.inbound(request, SecurityUtils.requirePrincipal());
         return ApiResponse.ok("入库成功");
     }
 

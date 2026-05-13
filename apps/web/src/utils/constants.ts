@@ -20,12 +20,12 @@ export const ORDER_STATUS_CLASS: Record<string, string> = {
 }
 
 export const CATEGORY_MAP: Record<string, string> = {
-  seed: '种子种苗',
-  fertilizer: '肥料营养',
-  tool: '园艺工具',
-  pest: '病虫防治',
-  pot: '花盆基质',
-  smart: '智能设备',
+  VEGETABLE: '蔬菜种子',
+  FLOWER: '花卉种子',
+  HERB: '草本植物',
+  SUCCULENT: '多肉植物',
+  TOOL: '种植工具',
+  FERTILIZER: '营养肥料',
 }
 
 export const DEFAULT_WARNING_THRESHOLD = 5

@@ -1,17 +1,10 @@
 package com.greenplan.api.reviews;
 
 import com.greenplan.api.common.ApiResponse;
-import com.greenplan.api.security.JwtUserPrincipal;
+import com.greenplan.api.security.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -31,17 +24,16 @@ public class ReviewController {
     }
 
     @GetMapping("/reviews/me")
-    public ApiResponse<List<ProductReviewDto>> listMine(Authentication authentication) {
-        return ApiResponse.ok(reviewService.listMine((JwtUserPrincipal) authentication.getPrincipal()));
+    public ApiResponse<List<ProductReviewDto>> listMine() {
+        return ApiResponse.ok(reviewService.listMine(SecurityUtils.requirePrincipal()));
     }
 
     @PostMapping("/orders/{orderId}/reviews")
     public ApiResponse<ProductReviewDto> createReview(
             @PathVariable Long orderId,
-            @Valid @RequestBody CreateReviewRequest request,
-            Authentication authentication
+            @Valid @RequestBody CreateReviewRequest request
     ) {
-        return ApiResponse.ok("评价提交成功", reviewService.createReview(orderId, request, (JwtUserPrincipal) authentication.getPrincipal()));
+        return ApiResponse.ok("评价提交成功", reviewService.createReview(orderId, request, SecurityUtils.requirePrincipal()));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

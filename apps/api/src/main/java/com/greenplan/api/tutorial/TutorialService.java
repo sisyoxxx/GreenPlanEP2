@@ -1,5 +1,7 @@
 package com.greenplan.api.tutorial;
 
+import com.greenplan.api.common.exception.BusinessException;
+import com.greenplan.api.common.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +37,7 @@ public class TutorialService {
 
     public TutorialItemDto getTutorialDetail(Long id) {
         Tutorial tutorial = tutorialRepository.findByIdAndPublishedTrue(id)
-                .orElseThrow(() -> new IllegalArgumentException("Tutorial not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("教程不存在"));
         return toDto(tutorial);
     }
 
@@ -56,7 +58,7 @@ public class TutorialService {
     @Transactional
     public TutorialAdminDto update(Long id, TutorialUpsertRequest request) {
         Tutorial tutorial = tutorialRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Tutorial not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("教程不存在"));
         applyRequest(tutorial, request);
         return toAdminDto(tutorialRepository.save(tutorial));
     }
@@ -64,7 +66,7 @@ public class TutorialService {
     @Transactional
     public void delete(Long id) {
         if (!tutorialRepository.existsById(id)) {
-            throw new IllegalArgumentException("Tutorial not found");
+            throw new ResourceNotFoundException("教程不存在");
         }
         tutorialRepository.deleteById(id);
     }
@@ -72,7 +74,7 @@ public class TutorialService {
     @Transactional
     public void swapDisplayOrder(Long id, String direction) {
         Tutorial current = tutorialRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Tutorial not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("教程不存在"));
 
         String area = current.getDisplayArea();
         Integer currentOrder = current.getDisplayOrder();
@@ -84,11 +86,11 @@ public class TutorialService {
             case "DOWN" -> tutorialRepository
                     .findFirstByDisplayAreaAndDisplayOrderGreaterThanOrderByDisplayOrderAsc(area, currentOrder)
                     .orElse(null);
-            default -> throw new IllegalArgumentException("Direction must be UP or DOWN");
+            default -> throw new BusinessException("方向必须是 UP 或 DOWN");
         };
 
         if (target == null) {
-            throw new IllegalArgumentException("无法移动，已在区域最" + (direction.equalsIgnoreCase("UP") ? "顶部" : "底部"));
+            throw new BusinessException("无法移动，已在区域最" + (direction.equalsIgnoreCase("UP") ? "顶部" : "底部"));
         }
 
         Integer targetOrder = target.getDisplayOrder();
@@ -170,7 +172,7 @@ public class TutorialService {
         }
         String upper = normalized.toUpperCase();
         if (!"IMAGE".equals(upper) && !"VIDEO".equals(upper)) {
-            throw new IllegalArgumentException("Unsupported media type");
+            throw new BusinessException("不支持的媒体类型");
         }
         return upper;
     }

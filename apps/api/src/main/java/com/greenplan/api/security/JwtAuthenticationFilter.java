@@ -2,6 +2,10 @@ package com.greenplan.api.security;
 
 import com.greenplan.api.auth.RoleCode;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,8 +43,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 RoleCode role = RoleCode.valueOf(claims.get("role", String.class));
                 JwtUserPrincipal principal = new JwtUserPrincipal(userId, username, role);
                 SecurityContextHolder.getContext().setAuthentication(principal.toAuthentication());
+            } catch (ExpiredJwtException ex) {
+                logger.warn("JWT expired for request [{}]", request.getRequestURI());
+                SecurityContextHolder.clearContext();
+            } catch (UnsupportedJwtException | MalformedJwtException | SignatureException ex) {
+                logger.warn("JWT invalid for request [{}]: {}", request.getRequestURI(), ex.getMessage());
+                SecurityContextHolder.clearContext();
             } catch (Exception ex) {
-                logger.warn("JWT authentication failed for request [{}]: {}", request.getRequestURI(), ex.getMessage());
+                logger.error("JWT authentication failed for request [{}]", request.getRequestURI(), ex);
                 SecurityContextHolder.clearContext();
             }
         }

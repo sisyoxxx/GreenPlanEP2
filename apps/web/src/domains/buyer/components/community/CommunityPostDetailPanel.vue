@@ -206,8 +206,12 @@ function getReplies(commentId: number) {
 }
 
 .detail-top {
-  display: grid;
-  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #fff;
+  padding: 14px 0;
+  margin: -14px 0 0;
 }
 
 .detail-header-row {

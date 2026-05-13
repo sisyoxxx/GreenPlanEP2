@@ -8,12 +8,18 @@
       </label>
       <label>
         <span>SKU</span>
-        <input v-model.trim="localForm.sku" type="text" placeholder="如：GP-SEED-001" />
+        <input
+          :value="isEdit ? localForm.sku : '保存后自动生成'"
+          type="text"
+          readonly
+          :class="{ 'readonly-hint': !isEdit }"
+          :title="isEdit ? localForm.sku : 'SKU 将在保存商品后根据分类自动生成'"
+        />
       </label>
       <label>
         <span>分类</span>
         <select v-model="localForm.category">
-          <option v-for="c in categoryOptions" :key="c" :value="c">{{ c }}</option>
+          <option v-for="c in categoryOptions" :key="c.value" :value="c.value">{{ c.label }}</option>
         </select>
       </label>
       <label>
@@ -91,7 +97,14 @@ const emit = defineEmits<{
   (e: 'update:form', value: ProductFormData): void
 }>()
 
-const categoryOptions = ['蔬菜种子', '花卉种子', '香草种子', '营养肥料', '园艺工具', '多肉植物', '其他']
+const categoryOptions = [
+  { value: 'VEGETABLE', label: '蔬菜种子' },
+  { value: 'FLOWER', label: '花卉种子' },
+  { value: 'HERB', label: '草本植物' },
+  { value: 'SUCCULENT', label: '多肉植物' },
+  { value: 'TOOL', label: '种植工具' },
+  { value: 'FERTILIZER', label: '营养肥料' },
+]
 
 const localForm = reactive<ProductFormData>({ ...props.form })
 
@@ -137,6 +150,12 @@ label span {
 
 .full-span {
   grid-column: 1 / -1;
+}
+
+.readonly-hint {
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
 }
 
 .form-actions {

@@ -1,9 +1,8 @@
 package com.greenplan.api.orders;
 
 import com.greenplan.api.common.ApiResponse;
-import com.greenplan.api.security.JwtUserPrincipal;
+import com.greenplan.api.security.SecurityUtils;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,12 +22,12 @@ public class AdminOrderController {
     }
 
     @GetMapping
-    public ApiResponse<List<AdminOrderListDto>> list(Authentication authentication) {
-        return ApiResponse.ok(orderService.listAllForAdmin((JwtUserPrincipal) authentication.getPrincipal()));
+    public ApiResponse<List<AdminOrderListDto>> list() {
+        return ApiResponse.ok(orderService.listAllForAdmin(SecurityUtils.requirePrincipal()));
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<AdminOrderDetailDto> detail(@PathVariable Long id, Authentication authentication) {
-        return ApiResponse.ok(orderService.getDetailForAdmin(id, (JwtUserPrincipal) authentication.getPrincipal()));
+    public ApiResponse<AdminOrderDetailDto> detail(@PathVariable Long id) {
+        return ApiResponse.ok(orderService.getDetailForAdmin(id, SecurityUtils.requirePrincipal()));
     }
 }

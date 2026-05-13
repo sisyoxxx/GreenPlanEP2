@@ -5,6 +5,8 @@ import com.greenplan.api.auth.UserRepository;
 import com.greenplan.api.common.AuthorizationAssert;
 import com.greenplan.api.common.OrderStatus;
 import com.greenplan.api.common.ShippingStatus;
+import com.greenplan.api.common.exception.BusinessException;
+import com.greenplan.api.common.exception.ResourceNotFoundException;
 import com.greenplan.api.security.JwtUserPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,7 +85,7 @@ public class InventoryOrderService {
         AuthorizationAssert.requireInventoryManager(principal);
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("订单不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("订单不存在"));
 
         ShippingStatus shippingStatus = parseShippingStatus(request.shippingStatus());
         order.setShippingStatus(shippingStatus);
@@ -101,14 +103,14 @@ public class InventoryOrderService {
 
     private Order shipOrder(Long orderId, String trackingNo) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("订单不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("订单不存在"));
         performShip(order, trackingNo);
         return orderRepository.save(order);
     }
 
     private void performShip(Order order, String trackingNo) {
         if (order.getStatus() != OrderStatus.PAID) {
-            throw new IllegalArgumentException("当前订单状态不允许发货: " + order.getStatus());
+            throw new BusinessException("当前订单状态不允许发货: " + order.getStatus());
         }
 
         order.setShippingCarrier(null);
@@ -125,7 +127,7 @@ public class InventoryOrderService {
         try {
             return ShippingStatus.valueOf(value.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("无效的物流状态: " + value);
+            throw new BusinessException("无效的物流状态: " + value);
         }
     }
 

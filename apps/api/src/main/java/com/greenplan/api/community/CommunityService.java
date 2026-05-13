@@ -1,6 +1,9 @@
 package com.greenplan.api.community;
 
 import com.greenplan.api.auth.UserRepository;
+import com.greenplan.api.common.exception.BusinessException;
+import com.greenplan.api.common.exception.PermissionDeniedException;
+import com.greenplan.api.common.exception.ResourceNotFoundException;
 import com.greenplan.api.security.JwtUserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,7 +33,7 @@ public class CommunityService {
 
     public CommunityPost getPost(Long postId) {
         return postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("帖子不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("帖子不存在"));
     }
 
     public List<CommunityPostComment> listComments(Long postId) {
@@ -53,7 +56,7 @@ public class CommunityService {
     @Transactional
     public CommunityPost auditPost(Long postId, String auditStatus, String auditMessage) {
         CommunityPost post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("帖子不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("帖子不存在"));
         if ("approved".equals(auditStatus) || "rejected".equals(auditStatus) || "hidden".equals(auditStatus)) {
             post.setAuditStatus(auditStatus);
         }
@@ -68,9 +71,9 @@ public class CommunityService {
     @Transactional
     public CommunityPost updatePost(Long postId, CreatePostRequest request, JwtUserPrincipal principal) {
         CommunityPost post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("帖子不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("帖子不存在"));
         if (!principal.getId().equals(post.getAuthorId())) {
-            throw new IllegalArgumentException("无权编辑他人帖子");
+            throw new PermissionDeniedException("无权编辑他人帖子");
         }
         post.setTopic(request.topic());
         post.setTitle(request.title());
@@ -82,9 +85,9 @@ public class CommunityService {
     @Transactional
     public void deletePost(Long postId, JwtUserPrincipal principal) {
         CommunityPost post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("帖子不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("帖子不存在"));
         if (!principal.getId().equals(post.getAuthorId())) {
-            throw new IllegalArgumentException("无权删除他人帖子");
+            throw new PermissionDeniedException("无权删除他人帖子");
         }
         commentRepository.deleteByPostId(postId);
         likeRepository.deleteByPostId(postId);
@@ -95,7 +98,7 @@ public class CommunityService {
     @Transactional
     public boolean toggleLike(Long postId, Long userId) {
         CommunityPost post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("帖子不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("帖子不存在"));
         boolean alreadyLiked = likeRepository.existsByPostIdAndUserId(postId, userId);
         int currentLikeCount = post.getLikeCount() == null ? 0 : post.getLikeCount();
         if (alreadyLiked) {
@@ -117,7 +120,7 @@ public class CommunityService {
     @Transactional
     public boolean toggleFavorite(Long postId, Long userId) {
         CommunityPost post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("帖子不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("帖子不存在"));
         boolean alreadyFavorited = favoriteRepository.existsByPostIdAndUserId(postId, userId);
         if (alreadyFavorited) {
             favoriteRepository.deleteByPostIdAndUserId(postId, userId);
@@ -148,11 +151,10 @@ public class CommunityService {
         return likeRepository.existsByPostIdAndUserId(postId, userId);
     }
 
-
     @Transactional
     public CommunityPostComment createComment(Long postId, CreateCommentRequest request, JwtUserPrincipal principal) {
         CommunityPost post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("帖子不存在"));
+                .orElseThrow(() -> new ResourceNotFoundException("帖子不存在"));
         CommunityPostComment comment = new CommunityPostComment();
         comment.setPostId(postId);
         comment.setAuthorId(principal.getId());

@@ -1,9 +1,8 @@
 package com.greenplan.api.auth;
 
 import com.greenplan.api.common.ApiResponse;
-import com.greenplan.api.security.JwtUserPrincipal;
+import com.greenplan.api.security.SecurityUtils;
 import jakarta.validation.Valid;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -32,8 +31,8 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ApiResponse<UserProfile> me(Authentication authentication) {
-        JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
+    public ApiResponse<UserProfile> me() {
+        var principal = SecurityUtils.requirePrincipal();
         return ApiResponse.ok(new UserProfile(principal.getId(), principal.getUsername(), principal.getRole()));
     }
 }

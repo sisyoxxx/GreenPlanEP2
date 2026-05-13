@@ -20,6 +20,7 @@ export interface CommunityPostItem {
   content: string
   time: string
   likes: number
+  commentCount: number
   mine: boolean
   author: string
   imageUrl?: string
@@ -45,6 +46,7 @@ function normalizePost(raw: any): CommunityPostItem | null {
     content: String(raw?.content || ''),
     time: String(raw?.time || ''),
     likes: Number.isFinite(Number(raw?.likes)) ? Number(raw.likes) : 0,
+    commentCount: Number.isFinite(Number(raw?.commentCount)) ? Number(raw.commentCount) : 0,
     mine: Boolean(raw?.mine),
     liked: Boolean(raw?.liked),
     favorited: Boolean(raw?.favorited),

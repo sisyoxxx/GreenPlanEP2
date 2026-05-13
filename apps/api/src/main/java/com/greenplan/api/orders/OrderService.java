@@ -1,13 +1,15 @@
 package com.greenplan.api.orders;
 
-import com.greenplan.api.auth.RoleCode;
 import com.greenplan.api.auth.User;
 import com.greenplan.api.auth.UserRepository;
-import com.greenplan.api.common.AuthorizationAssert;
 import com.greenplan.api.catalog.Product;
 import com.greenplan.api.catalog.ProductRepository;
+import com.greenplan.api.common.AuthorizationAssert;
 import com.greenplan.api.common.OrderStatus;
+import com.greenplan.api.common.ProductStatus;
 import com.greenplan.api.common.ShippingStatus;
+import com.greenplan.api.common.exception.BusinessException;
+import com.greenplan.api.common.exception.ResourceNotFoundException;
 import com.greenplan.api.inventory.InventoryItemRepository;
 import com.greenplan.api.inventory.InventoryMovement;
 import com.greenplan.api.inventory.InventoryMovementRepository;
@@ -58,31 +60,46 @@ public class OrderService {
 
     @Transactional
     public OrderDetailDto create(CreateOrderRequest request, JwtUserPrincipal principal) {
-
         List<OrderItem> itemsToSave = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
 
         for (CreateOrderItemRequest itemReq : request.items()) {
-            Product product = productRepository.findById(itemReq.productId())
-                    .orElseThrow(() -> new IllegalArgumentException("Product not found: " + itemReq.productId()));
-
-            int deducted = inventoryItemRepository.deductStock(itemReq.productId(), itemReq.quantity());
-            if (deducted == 0) {
-                throw new IllegalArgumentException("Insufficient inventory: " + product.getName());
-            }
-
-            BigDecimal lineTotal = product.getPrice().multiply(BigDecimal.valueOf(itemReq.quantity()));
-            total = total.add(lineTotal);
-
-            OrderItem orderItem = new OrderItem();
-            orderItem.setProductId(product.getId());
-            orderItem.setProductNameSnapshot(product.getName());
-            orderItem.setPriceSnapshot(product.getPrice());
-            orderItem.setQuantity(itemReq.quantity());
-            orderItem.setLineTotal(lineTotal);
+            OrderItem orderItem = buildOrderItem(itemReq);
+            total = total.add(orderItem.getLineTotal());
             itemsToSave.add(orderItem);
         }
 
+        Order savedOrder = saveOrder(principal, total);
+        List<OrderItemDto> responseItems = saveOrderItems(itemsToSave, savedOrder, principal.getId());
+
+        return orderMapper.toDetailDto(savedOrder, responseItems);
+    }
+
+    private OrderItem buildOrderItem(CreateOrderItemRequest itemReq) {
+        Product product = productRepository.findById(itemReq.productId())
+                .orElseThrow(() -> new ResourceNotFoundException("商品不存在: " + itemReq.productId()));
+
+        if (!ProductStatus.PUBLISHED.name().equals(product.getStatus())) {
+            throw new BusinessException("商品已下架或不可用: " + product.getName());
+        }
+
+        int affected = inventoryItemRepository.deductStock(itemReq.productId(), itemReq.quantity());
+        if (affected == 0) {
+            throw new BusinessException("库存不足: " + product.getName());
+        }
+
+        BigDecimal lineTotal = product.getPrice().multiply(BigDecimal.valueOf(itemReq.quantity()));
+
+        OrderItem orderItem = new OrderItem();
+        orderItem.setProductId(product.getId());
+        orderItem.setProductNameSnapshot(product.getName());
+        orderItem.setPriceSnapshot(product.getPrice());
+        orderItem.setQuantity(itemReq.quantity());
+        orderItem.setLineTotal(lineTotal);
+        return orderItem;
+    }
+
+    private Order saveOrder(JwtUserPrincipal principal, BigDecimal total) {
         Order order = new Order();
         order.setOrderNo("GP" + System.currentTimeMillis());
         order.setBuyerId(principal.getId());
@@ -90,26 +107,30 @@ public class OrderService {
         order.setTotalAmount(total);
         order.setShippingStatus(ShippingStatus.PENDING);
         order.setCreatedAt(LocalDateTime.now());
-        Order savedOrder = orderRepository.save(order);
+        return orderRepository.save(order);
+    }
 
+    private List<OrderItemDto> saveOrderItems(List<OrderItem> items, Order order, Long operatorId) {
         List<OrderItemDto> responseItems = new ArrayList<>();
-        for (OrderItem orderItem : itemsToSave) {
-            orderItem.setOrderId(savedOrder.getId());
-            OrderItem saved = orderItemRepository.save(orderItem);
+        for (OrderItem item : items) {
+            item.setOrderId(order.getId());
+            OrderItem saved = orderItemRepository.save(item);
             responseItems.add(orderMapper.toItemDto(saved));
-
-            InventoryMovement movement = new InventoryMovement();
-            movement.setProductId(saved.getProductId());
-            movement.setType("SALE_DEDUCT");
-            movement.setQuantity(-saved.getQuantity());
-            movement.setSourceRefType("ORDER");
-            movement.setSourceRefId(savedOrder.getOrderNo());
-            movement.setOperatorUserId(principal.getId());
-            movement.setRemark("Order stock deduction");
-            movementRepository.save(movement);
+            recordInventoryMovement(saved, order, operatorId);
         }
+        return responseItems;
+    }
 
-        return orderMapper.toDetailDto(savedOrder, responseItems);
+    private void recordInventoryMovement(OrderItem item, Order order, Long operatorId) {
+        InventoryMovement movement = new InventoryMovement();
+        movement.setProductId(item.getProductId());
+        movement.setType("SALE_DEDUCT");
+        movement.setQuantity(-item.getQuantity());
+        movement.setSourceRefType("ORDER");
+        movement.setSourceRefId(order.getOrderNo());
+        movement.setOperatorUserId(operatorId);
+        movement.setRemark("Order stock deduction");
+        movementRepository.save(movement);
     }
 
     public List<OrderDetailDto> listMine(JwtUserPrincipal principal) {
@@ -128,12 +149,11 @@ public class OrderService {
 
     @Transactional
     public OrderDetailDto confirmReceived(Long orderId, JwtUserPrincipal principal) {
-
         Order order = orderRepository.findByIdAndBuyerId(orderId, principal.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Order not found or no permission"));
+                .orElseThrow(() -> new ResourceNotFoundException("订单不存在或无权操作"));
 
         if (order.getStatus() != OrderStatus.SHIPPED) {
-            throw new IllegalArgumentException("Only shipped orders can be confirmed");
+            throw new BusinessException("只有已发货的订单才能确认收货");
         }
 
         order.setStatus(OrderStatus.DELIVERED);
@@ -160,11 +180,11 @@ public class OrderService {
                 .map(order -> new AdminOrderListDto(
                         order.getId(),
                         order.getOrderNo(),
-                        order.getStatus().name(),
+                        OrderMapper.enumName(order.getStatus()),
                         order.getTotalAmount(),
                         order.getBuyerId(),
                         buyerNameMap.get(order.getBuyerId()),
-                        order.getShippingStatus() == null ? null : order.getShippingStatus().name(),
+                        OrderMapper.enumName(order.getShippingStatus()),
                         order.getCreatedAt(),
                         order.getShippedAt()
                 ))
@@ -175,7 +195,7 @@ public class OrderService {
         AuthorizationAssert.requireAdmin(principal);
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("订单不存在"));
 
         String buyerUsername = userRepository.findById(order.getBuyerId())
                 .map(User::getUsername)
@@ -189,11 +209,11 @@ public class OrderService {
         return new AdminOrderDetailDto(
                 order.getId(),
                 order.getOrderNo(),
-                order.getStatus().name(),
+                OrderMapper.enumName(order.getStatus()),
                 order.getTotalAmount(),
                 order.getBuyerId(),
                 buyerUsername,
-                order.getShippingStatus() == null ? null : order.getShippingStatus().name(),
+                OrderMapper.enumName(order.getShippingStatus()),
                 order.getCreatedAt(),
                 order.getShippedAt(),
                 items,
@@ -211,7 +231,8 @@ public class OrderService {
                 review.getBuyerUsernameSnapshot(),
                 review.getRating(),
                 review.getContent(),
-                review.getCreatedAt()
+                review.getCreatedAt(),
+                null
         );
     }
 }

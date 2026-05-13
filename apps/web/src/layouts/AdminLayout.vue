@@ -59,10 +59,12 @@
 import { ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../core/auth/useAuthStore'
+import { useBuyerCartStore } from '../domains/buyer/stores/useBuyerCartStore'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const cartStore = useBuyerCartStore()
 const showDropdown = ref(false)
 const expandedSubmenu = ref<string | null>(null)
 let hideTimer: ReturnType<typeof setTimeout> | null = null
@@ -141,6 +143,7 @@ function onLeave() {
 
 function logout() {
   showDropdown.value = false
+  cartStore.$reset()
   auth.logout()
   router.push('/login')
 }

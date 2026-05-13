@@ -111,8 +111,8 @@ function goCart() {
 
 async function logout() {
   showDropdown.value = false
+  cartStore.$reset()
   auth.logout()
-  await cartStore.clear()
   router.push('/login')
 }
 

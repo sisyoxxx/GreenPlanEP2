@@ -29,12 +29,12 @@ export const useAuthStore = defineStore('auth', {
   },
   actions: {
     async login(payload: LoginPayload) {
-      const res = await http.post('/api/auth/login', payload) as { data: AuthResponse }
-      this.applyAuth(res.data)
+      const res = await http.post('/api/auth/login', payload) as AuthResponse
+      this.applyAuth(res)
     },
     async register(payload: { username: string; password: string; roleCode: Role }) {
-      const res = await http.post('/api/auth/register', payload) as { data: AuthResponse }
-      this.applyAuth(res.data)
+      const res = await http.post('/api/auth/register', payload) as AuthResponse
+      this.applyAuth(res)
     },
     applyAuth(data: AuthResponse) {
       this.accessToken = data.accessToken

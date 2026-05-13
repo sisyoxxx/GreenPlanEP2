@@ -196,13 +196,13 @@ async function submitOrder(payload: Array<{ productId: number; quantity: number 
   message.value = ''
 
   try {
-    const res = await createOrder(payload) as { data: { id: number; orderNo: string } }
+    const order = await createOrder(payload)
     for (const id of removeIds) {
       await cartStore.removeItem(id)
     }
     selectedIds.value = new Set()
-    message.value = `订单提交成功，订单号 ${res.data.orderNo}`
-    router.push(`/orders?focus=${res.data.id}`)
+    message.value = `订单提交成功，订单号 ${order.orderNo}`
+    router.push(`/orders?focus=${order.id}`)
   } catch (err: any) {
     message.value = err?.response?.data?.message || '下单失败'
   } finally {

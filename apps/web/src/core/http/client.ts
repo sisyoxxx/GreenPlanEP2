@@ -19,10 +19,12 @@ http.interceptors.request.use((config) => {
 })
 
 http.interceptors.response.use(
-  (res) => res.data,
+  (res) => {
+    const apiRes = res.data as { success: boolean; message?: string; data: unknown }
+    return apiRes.data as any
+  },
   (err) => {
     const status = err.response?.status
-    // 401: 认证失效，需要重新登录
     if (status === 401) {
       const store = useAuthStore()
       const hadToken = !!store.accessToken
@@ -31,7 +33,6 @@ http.interceptors.response.use(
         window.location.assign('/login')
       }
     }
-    // 403: 权限不足，不自动登出，只抛出错误让调用方处理
     return Promise.reject(err)
   }
 )

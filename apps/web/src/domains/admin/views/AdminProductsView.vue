@@ -40,13 +40,43 @@
         <p v-if="message" class="message">{{ message }}</p>
         <p v-if="error" class="error">{{ error }}</p>
 
+        <div class="batch-bar" v-if="selectedIds.length > 0">
+          <span>已选择 {{ selectedIds.length }} 项</span>
+          <button class="danger-btn" @click="openBatchDelete">批量删除</button>
+        </div>
+
         <ProductTable
           :items="displayProducts"
           :loading="loading"
+          :selected-ids="selectedIds"
+          :is-all-selected="isAllSelected"
           @edit="startEdit"
           @toggle-status="toggleStatus"
+          @delete="openSingleDelete"
+          @toggle-select="toggleSelect"
+          @toggle-select-all="toggleSelectAll"
         />
       </section>
+
+      <BaseModal
+        :open="showDeleteConfirm"
+        :title="deleteMode === 'single' ? '确认删除' : '确认批量删除'"
+        size="sm"
+        @close="cancelDelete"
+      >
+        <p v-if="deleteMode === 'single'">
+          确定要删除商品 <strong>{{ deleteTargetName }}</strong> 吗？<br />
+          删除后该商品将不再展示，已有的订单和评价数据会被保留，但用户无法继续购买。
+        </p>
+        <p v-else>
+          确定要删除选中的 <strong>{{ selectedIds.length }}</strong> 个商品吗？<br />
+          删除后这些商品将不再展示，已有的订单和评价数据会被保留，但用户无法继续购买。
+        </p>
+        <template #footer>
+          <button class="secondary-btn" @click="cancelDelete">取消</button>
+          <button class="danger-btn" @click="confirmDelete">确认删除</button>
+        </template>
+      </BaseModal>
     </div>
   </AdminLayout>
 </template>
@@ -58,12 +88,19 @@ import AdminLayout from '../../../layouts/AdminLayout.vue'
 import BaseModal from '../../../shared/components/BaseModal.vue'
 import ProductForm from '../components/ProductForm.vue'
 import ProductTable from '../components/ProductTable.vue'
-import { createProduct, fetchAdminProducts, updateProduct, updateProductStatus, type AdminProduct } from '../api'
+import { createProduct, fetchAdminProducts, updateProduct, updateProductStatus, deleteProduct, batchDeleteProducts, type AdminProduct } from '../api'
 
 const route = useRoute()
 const router = useRouter()
 
-const categoryOptions = ['蔬菜种子', '花卉种子', '香草种子', '营养肥料', '园艺工具', '多肉植物', '其他']
+const categoryOptions = [
+  { value: 'VEGETABLE', label: '蔬菜种子' },
+  { value: 'FLOWER', label: '花卉种子' },
+  { value: 'HERB', label: '草本植物' },
+  { value: 'SUCCULENT', label: '多肉植物' },
+  { value: 'TOOL', label: '种植工具' },
+  { value: 'FERTILIZER', label: '营养肥料' },
+]
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -73,6 +110,10 @@ const message = ref('')
 const error = ref('')
 const keyword = ref(String(route.query.keyword || ''))
 const products = ref<AdminProduct[]>([])
+const selectedIds = ref<number[]>([])
+const showDeleteConfirm = ref(false)
+const deleteMode = ref<'single' | 'batch'>('single')
+const deleteTargetName = ref('')
 
 const displayProducts = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
@@ -88,7 +129,7 @@ const form = reactive({
   name: '',
   description: '',
   price: 0,
-  category: categoryOptions[0],
+  category: categoryOptions[0].value,
   variety: '',
   plantingMonth: '全年',
   suitableRegion: '全国',
@@ -136,7 +177,7 @@ function startEdit(item: AdminProduct) {
   form.name = item.name || ''
   form.description = item.description || ''
   form.price = Number(item.price || 0)
-  form.category = item.category || categoryOptions[0]
+  form.category = item.category || categoryOptions[0].value
   form.variety = item.variety || ''
   form.plantingMonth = item.plantingMonth || '全年'
   form.suitableRegion = item.suitableRegion || '全国'
@@ -152,7 +193,7 @@ function resetForm() {
   form.name = ''
   form.description = ''
   form.price = 0
-  form.category = categoryOptions[0]
+  form.category = categoryOptions[0].value
   form.variety = ''
   form.plantingMonth = '全年'
   form.suitableRegion = '全国'
@@ -178,7 +219,6 @@ async function submitProduct(overrideForm?: typeof form) {
 
   if (
     !form.name ||
-    !form.sku ||
     !form.category ||
     !form.variety ||
     !form.plantingMonth ||
@@ -193,8 +233,7 @@ async function submitProduct(overrideForm?: typeof form) {
   }
 
   submitting.value = true
-  const payload = {
-    sku: form.sku,
+  const payload: any = {
     name: form.name,
     description: form.description,
     price: form.price,
@@ -206,6 +245,9 @@ async function submitProduct(overrideForm?: typeof form) {
     germinationRate: Number(form.germinationRate),
     imageUrl: form.imageUrl,
     initialStock: Math.max(0, Number(form.initialStock || 0))
+  }
+  if (editingId.value) {
+    payload.sku = form.sku
   }
 
   try {
@@ -235,6 +277,62 @@ async function toggleStatus(item: AdminProduct) {
     message.value = `商品已${next === 'PUBLISHED' ? '上架' : '下架'}`
   } catch (err: any) {
     error.value = err?.response?.data?.message || '更新商品状态失败'
+  }
+}
+
+const isAllSelected = computed(() => {
+  return displayProducts.value.length > 0 && displayProducts.value.every((item) => selectedIds.value.includes(item.id))
+})
+
+function toggleSelect(id: number) {
+  const idx = selectedIds.value.indexOf(id)
+  if (idx >= 0) {
+    selectedIds.value.splice(idx, 1)
+  } else {
+    selectedIds.value.push(id)
+  }
+}
+
+function toggleSelectAll() {
+  if (isAllSelected.value) {
+    selectedIds.value = []
+  } else {
+    selectedIds.value = displayProducts.value.map((item) => item.id)
+  }
+}
+
+function openSingleDelete(item: AdminProduct) {
+  deleteMode.value = 'single'
+  deleteTargetName.value = item.name
+  showDeleteConfirm.value = true
+}
+
+function openBatchDelete() {
+  deleteMode.value = 'batch'
+  deleteTargetName.value = ''
+  showDeleteConfirm.value = true
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+}
+
+async function confirmDelete() {
+  message.value = ''
+  error.value = ''
+  try {
+    if (deleteMode.value === 'single') {
+      await deleteProduct(selectedIds.value[0])
+      message.value = '商品已删除'
+    } else {
+      await batchDeleteProducts([...selectedIds.value])
+      message.value = `已删除 ${selectedIds.value.length} 个商品`
+    }
+    selectedIds.value = []
+    showDeleteConfirm.value = false
+    await loadProducts()
+  } catch (err: any) {
+    error.value = err?.response?.data?.message || '删除失败'
   }
 }
 </script>
@@ -291,6 +389,34 @@ async function toggleStatus(item: AdminProduct) {
   margin: 0;
   color: #dc2626;
   font-weight: 600;
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #7f1d1d;
+  font-size: 14px;
+}
+
+.danger-btn {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.danger-btn:hover {
+  background: #b91c1c;
 }
 
 @media (max-width: 760px) {

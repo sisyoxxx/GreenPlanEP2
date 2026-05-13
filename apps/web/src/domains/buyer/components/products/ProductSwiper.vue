@@ -1,11 +1,12 @@
 <template>
   <div class="page-lite products-swiper-wrap">
-    <Swiper
+    <Swiper v-if="ready"
       :modules="[Autoplay, Pagination, EffectCoverflow]"
       effect="coverflow"
       :slides-per-view="'auto'"
       :centered-slides="true"
       :loop="slides.length > 1"
+      :loopedSlides="slides.length"
       :autoplay="{ delay: 3200 }"
       :pagination="{ clickable: true }"
       :coverflow-effect="{
@@ -39,11 +40,17 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Autoplay, EffectCoverflow, Pagination } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/effect-coverflow'
 import 'swiper/css/pagination'
+
+const ready = ref(false)
+onMounted(() => {
+  setTimeout(() => { ready.value = true }, 80)
+})
 
 export interface SlideItem {
   tag: string
@@ -55,6 +62,7 @@ export interface SlideItem {
 defineProps<{
   slides: SlideItem[]
 }>()
+
 </script>
 
 <style scoped>

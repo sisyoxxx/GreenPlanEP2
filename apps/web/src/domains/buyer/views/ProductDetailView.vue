@@ -13,7 +13,15 @@
     </div>
 
     <template v-else-if="product">
-      <section class="product-detail-shell page-lite">
+      <section v-if="product.status !== 'PUBLISHED'" class="page-lite state-card">
+        <h3>商品已下架</h3>
+        <p class="muted">该商品当前不可购买，请返回商品页浏览其他商品。</p>
+        <div class="detail-actions">
+          <button @click="goProducts">返回商品页</button>
+        </div>
+      </section>
+
+      <section v-else class="product-detail-shell page-lite">
         <div class="detail-cover">
           <img v-if="hasDisplayImage(product.imageUrl)" class="product-image detail-image" :src="product.imageUrl" :alt="product.name" loading="lazy" />
           <div v-else class="product-thumb detail-thumb">{{ productThumbText }}</div>
@@ -179,14 +187,12 @@ async function confirmPay() {
   message.value = ''
 
   try {
-    const res = await createOrder([{ productId: product.value.id, quantity: payQuantity.value }]) as {
-      data: { id: number; orderNo: string }
-    }
-    message.value = `订单已生成：${res.data.orderNo}`
+    const order = await createOrder([{ productId: product.value.id, quantity: payQuantity.value }])
+    message.value = `订单已生成：${order.orderNo}`
     product.value = await fetchProduct(product.value.id)
     if (product.value) cartStore.syncProduct(product.value)
     closePayDialog()
-    router.push(`/orders?focus=${res.data.id}`)
+    router.push(`/orders?focus=${order.id}`)
   } catch (err: any) {
     message.value = err?.response?.data?.message || '下单失败'
   } finally {

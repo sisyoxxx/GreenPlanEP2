@@ -1,9 +1,8 @@
 package com.greenplan.api.profile;
 
 import com.greenplan.api.common.ApiResponse;
-import com.greenplan.api.security.JwtUserPrincipal;
+import com.greenplan.api.security.SecurityUtils;
 import jakarta.validation.Valid;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,44 +18,36 @@ public class ProfileController {
     }
 
     @GetMapping("/me")
-    public ApiResponse<MyProfileDto> me(Authentication authentication) {
-        JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-        return ApiResponse.ok(profileService.getMyProfile(principal.getId()));
+    public ApiResponse<MyProfileDto> me() {
+        return ApiResponse.ok(profileService.getMyProfile(SecurityUtils.requirePrincipal().getId()));
     }
 
     @PutMapping("/me")
-    public ApiResponse<MyProfileDto> updateMe(Authentication authentication, @RequestBody UpdateMyProfileRequest request) {
-        JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-        return ApiResponse.ok(profileService.updateMyProfile(principal.getId(), request));
+    public ApiResponse<MyProfileDto> updateMe(@RequestBody UpdateMyProfileRequest request) {
+        return ApiResponse.ok(profileService.updateMyProfile(SecurityUtils.requirePrincipal().getId(), request));
     }
 
     @GetMapping("/me/addresses")
-    public ApiResponse<List<AddressDto>> myAddresses(Authentication authentication) {
-        JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-        return ApiResponse.ok(profileService.listAddresses(principal.getId()));
+    public ApiResponse<List<AddressDto>> myAddresses() {
+        return ApiResponse.ok(profileService.listAddresses(SecurityUtils.requirePrincipal().getId()));
     }
 
     @PostMapping("/me/addresses")
-    public ApiResponse<AddressDto> createAddress(Authentication authentication, @Valid @RequestBody UpsertAddressRequest request) {
-        JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-        return ApiResponse.ok(profileService.createAddress(principal.getId(), request));
+    public ApiResponse<AddressDto> createAddress(@Valid @RequestBody UpsertAddressRequest request) {
+        return ApiResponse.ok(profileService.createAddress(SecurityUtils.requirePrincipal().getId(), request));
     }
 
     @PutMapping("/me/addresses/{id}")
     public ApiResponse<AddressDto> updateAddress(
-            Authentication authentication,
             @PathVariable Long id,
             @Valid @RequestBody UpsertAddressRequest request
     ) {
-        JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-        return ApiResponse.ok(profileService.updateAddress(principal.getId(), id, request));
+        return ApiResponse.ok(profileService.updateAddress(SecurityUtils.requirePrincipal().getId(), id, request));
     }
 
     @DeleteMapping("/me/addresses/{id}")
-    public ApiResponse<Void> deleteAddress(Authentication authentication, @PathVariable Long id) {
-        JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-        profileService.deleteAddress(principal.getId(), id);
+    public ApiResponse<Void> deleteAddress(@PathVariable Long id) {
+        profileService.deleteAddress(SecurityUtils.requirePrincipal().getId(), id);
         return ApiResponse.ok("OK");
     }
 }
-

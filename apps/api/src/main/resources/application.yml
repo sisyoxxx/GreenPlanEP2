@@ -32,6 +32,8 @@ app:
   jwt:
     secret: 0123456789012345678901234567890123456789012345678901234567890123
     access-expiration-minutes: 120
+  upload:
+    dir: D:/tool/aLemon/vue/GreenPlanEP2/uploads
   qwen:
     # DashScope (Tongyi Qianwen) OpenAI-compatible base URL.
     base-url: https://dashscope.aliyuncs.com/compatible-mode/v1

@@ -3,6 +3,8 @@ package com.greenplan.api.catalog;
 import com.greenplan.api.common.ProductStatus;
 import com.greenplan.api.inventory.InventoryItem;
 import com.greenplan.api.inventory.InventoryItemRepository;
+import com.greenplan.api.common.exception.BusinessException;
+import com.greenplan.api.common.exception.ResourceNotFoundException;
 import com.greenplan.api.orders.OrderItemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,31 +33,37 @@ public class ProductService {
     public List<ProductDto> listPublished() {
         return productRepository.findAll().stream()
                 .filter(product -> ProductStatus.PUBLISHED.name().equals(product.getStatus()))
+                .filter(product -> !ProductStatus.DELETED.name().equals(product.getStatus()))
                 .map(this::toDto)
                 .toList();
     }
 
     public List<ProductDto> listAll() {
         return productRepository.findAll().stream()
+                .filter(product -> !ProductStatus.DELETED.name().equals(product.getStatus()))
                 .map(this::toDto)
                 .toList();
     }
 
     public ProductDto getById(Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("商品不存在"));
+        if (ProductStatus.DELETED.name().equals(product.getStatus())) {
+            throw new ResourceNotFoundException("商品已删除");
+        }
         return toDto(product);
     }
 
     @Transactional
     public ProductDto create(ProductUpsertRequest request) {
+        ProductCategory category = ProductCategory.fromValue(request.category());
+
         Product product = new Product();
-        product.setSku(request.sku());
         product.setName(request.name());
         product.setDescription(request.description());
         product.setPrice(request.price());
         product.setStatus(ProductStatus.PUBLISHED.name());
-        product.setCategory(request.category());
+        product.setCategory(category.name());
         product.setVariety(request.variety());
         product.setPlantingMonth(request.plantingMonth());
         product.setSuitableRegion(request.suitableRegion());
@@ -63,6 +71,9 @@ public class ProductService {
         product.setGerminationRate(request.germinationRate());
         product.setImageUrl(request.imageUrl());
         Product saved = productRepository.save(product);
+
+        saved.setSku(generateSku(saved));
+        productRepository.save(saved);
 
         initializeInventory(saved, request.initialStock());
 
@@ -72,12 +83,13 @@ public class ProductService {
     @Transactional
     public ProductDto update(Long id, ProductUpsertRequest request) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
-        product.setSku(request.sku());
+                .orElseThrow(() -> new ResourceNotFoundException("商品不存在"));
+        ProductCategory category = ProductCategory.fromValue(request.category());
+
         product.setName(request.name());
         product.setDescription(request.description());
         product.setPrice(request.price());
-        product.setCategory(request.category());
+        product.setCategory(category.name());
         product.setVariety(request.variety());
         product.setPlantingMonth(request.plantingMonth());
         product.setSuitableRegion(request.suitableRegion());
@@ -96,9 +108,35 @@ public class ProductService {
     @Transactional
     public void updateStatus(Long id, String status) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("商品不存在"));
+        if (ProductStatus.DELETED.name().equals(product.getStatus())) {
+            throw new BusinessException("已删除的商品无法修改状态");
+        }
         product.setStatus(status);
         productRepository.save(product);
+    }
+
+    @Transactional
+    public void softDelete(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("商品不存在"));
+        if (ProductStatus.DELETED.name().equals(product.getStatus())) {
+            return;
+        }
+        product.setStatus(ProductStatus.DELETED.name());
+        productRepository.save(product);
+    }
+
+    @Transactional
+    public void batchSoftDelete(List<Long> ids) {
+        for (Long id : ids) {
+            softDelete(id);
+        }
+    }
+
+    private String generateSku(Product product) {
+        ProductCategory category = ProductCategory.fromValue(product.getCategory());
+        return String.format("GP-%s-%04d", category.getSkuCode(), product.getId());
     }
 
     private void initializeInventory(Product product, Integer initialStock) {

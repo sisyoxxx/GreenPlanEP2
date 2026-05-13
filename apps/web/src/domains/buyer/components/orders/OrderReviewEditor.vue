@@ -1,6 +1,7 @@
 <template>
-  <section class="page-lite review-editor">
-    <div class="review-editor-head">
+  <div class="review-overlay" @click.self="emit('cancel')">
+    <section class="page-lite review-editor">
+      <div class="review-editor-head">
       <div>
         <h3>提交评价</h3>
         <p class="muted">{{ productName }} · 订单 {{ orderNo }}</p>
@@ -37,8 +38,9 @@
         {{ submitting ? '提交中...' : '提交评价' }}
       </button>
       <button class="secondary-btn" @click="emit('cancel')">取消</button>
-    </div>
-  </section>
+      </div>
+    </section>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -59,9 +61,27 @@ const emit = defineEmits<{
 </script>
 
 <style scoped>
+.review-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
 .review-editor {
   display: grid;
   gap: 14px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
 }
 
 .review-editor-head {

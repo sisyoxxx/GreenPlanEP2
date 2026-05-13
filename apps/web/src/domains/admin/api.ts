@@ -142,13 +142,11 @@ export interface SalesOverview {
 }
 
 export async function fetchSalesOverview() {
-  const res = await http.get('/api/admin/reports/sales/overview') as { data: SalesOverview }
-  return res.data
+  return await http.get('/api/admin/reports/sales/overview') as SalesOverview
 }
 
 export async function fetchAnnouncements() {
-  const res = await http.get('/api/announcements') as { data: AdminAnnouncement[] }
-  return res.data
+  return await http.get('/api/announcements') as AdminAnnouncement[]
 }
 
 export async function createAnnouncement(payload: { title: string; content: string }) {
@@ -181,8 +179,7 @@ export async function createProduct(payload: {
 }
 
 export async function fetchAdminProducts() {
-  const res = await http.get('/api/admin/products') as { data: AdminProduct[] }
-  return res.data
+  return await http.get('/api/admin/products') as AdminProduct[]
 }
 
 export async function updateProduct(
@@ -209,9 +206,16 @@ export async function updateProductStatus(id: number, status: string) {
   return http.patch(`/api/admin/products/${id}/status`, { status })
 }
 
+export async function deleteProduct(id: number) {
+  return http.delete(`/api/admin/products/${id}`)
+}
+
+export async function batchDeleteProducts(ids: number[]) {
+  return http.post('/api/admin/products/batch-delete', { ids })
+}
+
 export async function fetchPromotions() {
-  const res = await http.get('/api/promotions') as { data: AdminPromotion[] }
-  return res.data
+  return await http.get('/api/promotions') as AdminPromotion[]
 }
 
 export async function createPromotion(payload: {
@@ -240,8 +244,7 @@ export async function deletePromotion(id: number) {
 }
 
 export async function fetchPromotionPosts() {
-  const res = await http.get('/api/promotion-posts') as { data: AdminPromotionPost[] }
-  return res.data
+  return await http.get('/api/promotion-posts') as AdminPromotionPost[]
 }
 
 export async function createPromotionPost(payload: { promotionId: number; channel: string; content: string; imageUrl?: string | null }) {
@@ -257,8 +260,7 @@ export async function deletePromotionPost(id: number) {
 }
 
 export async function fetchAdminTutorials() {
-  const res = await http.get('/api/admin/tutorials') as { data: AdminTutorial[] }
-  return res.data
+  return await http.get('/api/admin/tutorials') as AdminTutorial[]
 }
 
 export async function createTutorial(payload: {
@@ -311,8 +313,7 @@ export async function swapTutorialOrder(id: number, direction: 'UP' | 'DOWN') {
 }
 
 export async function fetchAdminReviews() {
-  const res = await http.get('/api/admin/reviews') as { data: AdminOrderReviewItem[] }
-  return res.data
+  return await http.get('/api/admin/reviews') as AdminOrderReviewItem[]
 }
 
 export async function deleteAdminReview(id: number) {
@@ -320,23 +321,19 @@ export async function deleteAdminReview(id: number) {
 }
 
 export async function fetchAdminOrders() {
-  const res = await http.get('/api/admin/orders') as { data: AdminOrderListItem[] }
-  return res.data
+  return await http.get('/api/admin/orders') as AdminOrderListItem[]
 }
 
 export async function fetchAdminOrderDetail(orderId: number) {
-  const res = await http.get(`/api/admin/orders/${orderId}`) as { data: AdminOrderDetail }
-  return res.data
+  return await http.get(`/api/admin/orders/${orderId}`) as AdminOrderDetail
 }
 
 export async function fetchMyProfile() {
-  const res = await http.get('/api/profile/me') as { data: StaffProfile }
-  return res.data
+  return await http.get('/api/profile/me') as StaffProfile
 }
 
 export async function updateMyProfile(payload: Partial<Pick<StaffProfile, 'username' | 'gender' | 'phone' | 'avatarDataUrl'>>) {
-  const res = await http.put('/api/profile/me', payload) as { data: StaffProfile }
-  return res.data
+  return await http.put('/api/profile/me', payload) as StaffProfile
 }
 
 export interface AdminCommunityPost {
@@ -354,11 +351,9 @@ export interface AdminCommunityPost {
 }
 
 export async function fetchAdminCommunityPosts() {
-  const res = await http.get('/api/community/posts/admin') as { data: AdminCommunityPost[] }
-  return res.data
+  return await http.get('/api/community/posts/admin') as AdminCommunityPost[]
 }
 
 export async function auditCommunityPost(id: number, payload: { auditStatus: string; auditMessage?: string | null }) {
-  const res = await http.post(`/api/community/posts/${id}/audit`, payload) as { data: AdminCommunityPost }
-  return res.data
+  return await http.post(`/api/community/posts/${id}/audit`, payload) as AdminCommunityPost
 }

@@ -1,5 +1,9 @@
 package com.greenplan.api.common;
 
+import com.greenplan.api.common.exception.AuthenticationRequiredException;
+import com.greenplan.api.common.exception.BusinessException;
+import com.greenplan.api.common.exception.PermissionDeniedException;
+import com.greenplan.api.common.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -15,14 +19,32 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler(AuthenticationRequiredException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAuthRequired(AuthenticationRequiredException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(PermissionDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePermissionDenied(PermissionDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException ex) {
+        return ResponseEntity.badRequest().body(new ApiResponse<>(false, ex.getMessage(), null));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex) {
-        String message = ex.getMessage();
-        if ("请先登录".equals(message)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ApiResponse<>(false, message, null));
-        }
-        return ResponseEntity.badRequest().body(new ApiResponse<>(false, message, null));
+        return ResponseEntity.badRequest().body(new ApiResponse<>(false, ex.getMessage(), null));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

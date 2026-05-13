@@ -1,6 +1,7 @@
 package com.greenplan.api.common;
 
 import com.greenplan.api.auth.RoleCode;
+import com.greenplan.api.common.exception.PermissionDeniedException;
 import com.greenplan.api.security.JwtUserPrincipal;
 
 public final class AuthorizationAssert {
@@ -10,7 +11,7 @@ public final class AuthorizationAssert {
 
     public static void requireRole(JwtUserPrincipal principal, RoleCode requiredRole, String message) {
         if (principal == null || principal.getRole() != requiredRole) {
-            throw new IllegalArgumentException(message);
+            throw new PermissionDeniedException(message);
         }
     }
 
