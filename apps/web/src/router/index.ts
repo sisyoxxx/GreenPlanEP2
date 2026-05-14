@@ -33,12 +33,11 @@ const routes = [
   { path: '/admin/profile', name: 'AdminProfile', component: () => import('../domains/admin/views/AdminProfileView.vue'), meta: { requiresAuth: true, permission: 'ADMIN_ONLY' as Permission } },
 
   { path: '/inventory/dashboard', name: 'InventoryDashboard', component: () => import('../domains/inventory/views/InventoryDashboardView.vue'), meta: { requiresAuth: true, permission: 'INVENTORY_ONLY' as Permission } },
-  { path: '/inventory/procurement', name: 'InventoryProcurement', component: () => import('../domains/inventory/views/InventoryProcurementView.vue'), meta: { requiresAuth: true, permission: 'INVENTORY_ONLY' as Permission } },
   { path: '/inventory/orders', name: 'InventoryOrders', component: () => import('../domains/inventory/views/InventoryOrdersView.vue'), meta: { requiresAuth: true, permission: 'INVENTORY_ONLY' as Permission } },
   { path: '/inventory/items', name: 'InventoryItems', component: () => import('../domains/inventory/views/InventoryItemsView.vue'), meta: { requiresAuth: true, permission: 'INVENTORY_ONLY' as Permission } },
   { path: '/inventory/warnings', name: 'InventoryWarnings', component: () => import('../domains/inventory/views/InventoryWarningsView.vue'), meta: { requiresAuth: true, permission: 'INVENTORY_ONLY' as Permission } },
-  { path: '/inventory/inbound', name: 'InventoryInbound', component: () => import('../domains/inventory/views/InventoryInboundView.vue'), meta: { requiresAuth: true, permission: 'INVENTORY_ONLY' as Permission } },
   { path: '/inventory/movements', name: 'InventoryMovements', component: () => import('../domains/inventory/views/InventoryMovementsView.vue'), meta: { requiresAuth: true, permission: 'INVENTORY_ONLY' as Permission } },
+  { path: '/inventory/analytics', name: 'InventoryAnalytics', component: () => import('../domains/inventory/views/InventoryAnalyticsView.vue'), meta: { requiresAuth: true, permission: 'INVENTORY_ONLY' as Permission } },
   { path: '/inventory/profile', name: 'InventoryProfile', component: () => import('../domains/inventory/views/InventoryProfileView.vue'), meta: { requiresAuth: true, permission: 'INVENTORY_ONLY' as Permission } },
 
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('../domains/buyer/views/NotFoundView.vue') }

@@ -29,6 +29,7 @@
         <p v-if="error" class="error">{{ error }}</p>
 
         <div v-if="loading && list.length === 0" class="empty-state">订单加载中...</div>
+        <div v-else-if="error" class="empty-state">加载失败，请刷新重试</div>
         <div v-else-if="filtered.length === 0" class="empty-state">暂无匹配订单</div>
 
         <div v-else class="table-wrap">

@@ -5,7 +5,7 @@
 
     <div v-if="error" class="page-lite error-box">{{ error }}</div>
 
-    <div class="stats-row">
+    <div v-if="!error" class="stats-row">
       <div class="stat-card">
         <div class="stat-icon">￥</div>
         <div>
@@ -36,7 +36,7 @@
       </div>
     </div>
 
-    <div class="report-grid">
+    <div v-if="!error" class="report-grid">
       <div class="page-lite chart-panel">
         <h3>商品销量 TOP 10</h3>
         <div v-if="loading" class="empty-state">销量数据加载中...</div>

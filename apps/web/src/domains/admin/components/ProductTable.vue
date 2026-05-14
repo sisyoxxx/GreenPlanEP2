@@ -1,6 +1,7 @@
 <template>
   <div>
     <div v-if="loading && items.length === 0" class="empty-state">商品加载中...</div>
+    <div v-else-if="error" class="empty-state">加载失败，请刷新重试</div>
     <div v-else-if="items.length === 0" class="empty-state">暂无匹配商品</div>
     <div v-else class="table-wrap">
       <table class="prod-table">
@@ -69,6 +70,7 @@ defineProps<{
   loading: boolean
   selectedIds: number[]
   isAllSelected: boolean
+  error?: string
 }>()
 
 defineEmits<{

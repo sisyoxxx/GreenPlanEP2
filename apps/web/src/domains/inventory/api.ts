@@ -46,6 +46,16 @@ export async function updateInventoryOrderLogistics(orderId: number, payload: { 
   return http.patch(`/api/inventory/orders/${orderId}/logistics`, payload)
 }
 
+export async function fetchInventoryAnalytics() {
+  return await http.get('/api/inventory/analytics') as {
+    outboundByProduct: { productId: number; sku?: string; name: string; totalQty: number }[]
+    dailyTrend: { date: string; inbound: number; outbound: number }[]
+    inboundTotalThisMonth: number
+    outboundTotalThisMonth: number
+    currentTotalStock: number
+  }
+}
+
 export async function fetchMyProfile() {
   return await http.get('/api/profile/me') as InventoryStaffProfile
 }

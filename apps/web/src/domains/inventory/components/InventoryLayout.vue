@@ -3,18 +3,16 @@
     <div class="inventory-shell">
       <aside class="inventory-nav page-lite">
         <div class="nav-title">库存管理</div>
-        <p class="nav-sub">库存管理员工作区</p>
 
         <nav class="nav-list">
           <RouterLink to="/inventory/profile" class="nav-item" active-class="nav-active">个人信息</RouterLink>
           <div class="nav-divider"></div>
           <RouterLink to="/inventory/dashboard" class="nav-item" active-class="nav-active">工作台</RouterLink>
           <RouterLink to="/inventory/orders" class="nav-item" active-class="nav-active">订单管理</RouterLink>
-          <RouterLink to="/inventory/items" class="nav-item" active-class="nav-active">商品库存</RouterLink>
-          <RouterLink to="/inventory/inbound" class="nav-item" active-class="nav-active">入库</RouterLink>
-          <RouterLink to="/inventory/warnings" class="nav-item" active-class="nav-active">库存预警</RouterLink>
           <RouterLink to="/inventory/movements" class="nav-item" active-class="nav-active">库存流水</RouterLink>
-          <RouterLink to="/inventory/procurement" class="nav-item" active-class="nav-active">采购计划</RouterLink>
+          <RouterLink to="/inventory/analytics" class="nav-item" active-class="nav-active">库存分析</RouterLink>
+          <RouterLink to="/inventory/items" class="nav-item" active-class="nav-active">库存管理</RouterLink>
+          <RouterLink to="/inventory/warnings" class="nav-item" active-class="nav-active">库存预警</RouterLink>
         </nav>
       </aside>
 
@@ -55,6 +53,20 @@ const subtitleText = computed(() => props.subtitle ?? route.path.replace('/inven
   grid-template-columns: 260px minmax(0, 1fr);
   gap: 12px;
   align-items: start;
+  height: calc(100vh - 90px);
+  overflow: hidden;
+}
+
+.inventory-nav {
+  height: 100%;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.inventory-main {
+  height: 100%;
+  overflow-y: auto;
+  align-content: start;
 }
 
 .inventory-nav {
@@ -116,8 +128,12 @@ const subtitleText = computed(() => props.subtitle ?? route.path.replace('/inven
 .inventory-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 12px 16px;
 }
 
 .inventory-title {

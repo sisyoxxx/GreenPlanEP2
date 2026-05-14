@@ -50,6 +50,7 @@
           :loading="loading"
           :selected-ids="selectedIds"
           :is-all-selected="isAllSelected"
+          :error="error"
           @edit="startEdit"
           @toggle-status="toggleStatus"
           @delete="openSingleDelete"

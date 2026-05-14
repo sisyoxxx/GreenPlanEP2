@@ -1,13 +1,19 @@
 <template>
   <InventoryLayout title="订单管理" subtitle="点击订单展开详情，点击发货直接更新订单状态">
     <template #actions>
-      <button class="secondary-btn" @click="reload" :disabled="loading">{{ loading ? '加载中...' : '刷新' }}</button>
+      <input
+        v-model.trim="keyword"
+        class="search-input"
+        type="search"
+        placeholder="搜索订单号 / 买家"
+      />
       <select v-model="statusFilter" class="tiny">
         <option value="">全部状态</option>
         <option value="PAID">待发货</option>
         <option value="SHIPPED">运输中</option>
         <option value="DELIVERED">已签收</option>
       </select>
+      <button class="secondary-btn" @click="reload" :disabled="loading">{{ loading ? '加载中...' : '刷新' }}</button>
     </template>
 
     <section v-if="selectedShippableOrders.length > 0" class="page-lite batch-panel">
@@ -107,13 +113,24 @@ const message = ref('')
 const pendingOrderId = ref<number | null>(null)
 
 const statusFilter = ref('')
+const keyword = ref('')
 const rows = ref<InventoryOrder[]>([])
 const activeOrderId = ref<number | null>(null)
 const selectedIds = ref<Set<number>>(new Set())
 
 const filtered = computed(() => {
-  if (!statusFilter.value) return rows.value
-  return rows.value.filter((item) => item.status === statusFilter.value)
+  let result = rows.value
+  if (statusFilter.value) {
+    result = result.filter((item) => item.status === statusFilter.value)
+  }
+  const kw = keyword.value.trim().toLowerCase()
+  if (kw) {
+    result = result.filter((item) => {
+      const text = [item.orderNo, item.buyerUsername || '', String(item.id)].join(' ').toLowerCase()
+      return text.includes(kw)
+    })
+  }
+  return result
 })
 
 const eligibleOrders = computed(() => filtered.value.filter((item) => item.status === 'PAID'))
@@ -244,6 +261,11 @@ onMounted(reload)
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 10px;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 10;
+  padding: 8px 0;
 }
 
 .section-title {

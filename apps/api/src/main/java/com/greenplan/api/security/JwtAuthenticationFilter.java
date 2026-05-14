@@ -40,18 +40,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Claims claims = jwtTokenProvider.parseClaims(token);
                 Long userId = Long.parseLong(claims.getSubject());
                 String username = claims.get("username", String.class);
-                RoleCode role = RoleCode.valueOf(claims.get("role", String.class));
+                String roleStr = claims.get("role", String.class);
+                if (roleStr == null || roleStr.isBlank()) {
+                    throw new IllegalArgumentException("JWT missing role claim");
+                }
+                RoleCode role = RoleCode.valueOf(roleStr);
                 JwtUserPrincipal principal = new JwtUserPrincipal(userId, username, role);
                 SecurityContextHolder.getContext().setAuthentication(principal.toAuthentication());
             } catch (ExpiredJwtException ex) {
                 logger.warn("JWT expired for request [{}]", request.getRequestURI());
                 SecurityContextHolder.clearContext();
-            } catch (UnsupportedJwtException | MalformedJwtException | SignatureException ex) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("{\"success\":false,\"message\":\"登录已过期，请重新登录\"}");
+                response.setContentType("application/json;charset=UTF-8");
+                return;
+            } catch (UnsupportedJwtException | MalformedJwtException | SignatureException | IllegalArgumentException ex) {
                 logger.warn("JWT invalid for request [{}]: {}", request.getRequestURI(), ex.getMessage());
                 SecurityContextHolder.clearContext();
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("{\"success\":false,\"message\":\"登录信息无效，请重新登录\"}");
+                response.setContentType("application/json;charset=UTF-8");
+                return;
             } catch (Exception ex) {
                 logger.error("JWT authentication failed for request [{}]", request.getRequestURI(), ex);
                 SecurityContextHolder.clearContext();
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("{\"success\":false,\"message\":\"认证失败，请重新登录\"}");
+                response.setContentType("application/json;charset=UTF-8");
+                return;
             }
         }
         filterChain.doFilter(request, response);

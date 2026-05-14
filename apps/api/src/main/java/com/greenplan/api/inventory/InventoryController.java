@@ -45,4 +45,9 @@ public class InventoryController {
     public ApiResponse<List<InventoryMovement>> movements() {
         return ApiResponse.ok(movementRepository.findAll());
     }
+
+    @GetMapping("/analytics")
+    public ApiResponse<InventoryAnalyticsDto> analytics() {
+        return ApiResponse.ok(inventoryService.analytics());
+    }
 }

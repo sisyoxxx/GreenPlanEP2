@@ -17,10 +17,7 @@
         <h3>预警商品</h3>
         <p class="kpi warn">{{ warnings.length }}</p>
       </div>
-      <div class="info-card">
-        <h3>最近 20 条流水</h3>
-        <p class="kpi">{{ movements.length }}</p>
-      </div>
+
     </section>
 
     <section class="page-lite">
@@ -66,29 +63,7 @@
       </div>
     </section>
 
-    <section class="page-lite">
-      <div class="section-head">
-        <h2 class="section-title">最近流水</h2>
-        <RouterLink class="text-link" to="/inventory/movements">查看全部 →</RouterLink>
-      </div>
-      <div v-if="movements.length === 0" class="empty">暂无流水</div>
-      <div v-else class="table movements">
-        <div class="thead">
-          <div>时间</div>
-          <div>商品ID</div>
-          <div>类型</div>
-          <div class="right">数量</div>
-          <div>来源</div>
-        </div>
-        <div class="trow" v-for="m in movements" :key="m.id">
-          <div class="sub">{{ formatTime(m.createdAt) }}</div>
-          <div>#{{ m.productId }}</div>
-          <div class="pill">{{ m.type }}</div>
-          <div class="right"><strong>{{ m.quantity }}</strong></div>
-          <div class="sub">{{ m.sourceRefType }} {{ m.sourceRefId }}</div>
-        </div>
-      </div>
-    </section>
+
 
     <p v-if="error" class="error page-lite">{{ error }}</p>
   </InventoryLayout>
@@ -97,7 +72,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import InventoryLayout from '../components/InventoryLayout.vue'
-import { fetchInventoryItems, fetchInventoryMovements, fetchInventoryWarnings } from '../api'
+import { fetchInventoryItems, fetchInventoryWarnings } from '../api'
 
 type InventoryItem = {
   productId: number
@@ -107,13 +82,10 @@ type InventoryItem = {
   warningThreshold: number
 }
 
-type InventoryMovement = any
-
 const loading = ref(false)
 const error = ref('')
 const items = ref<InventoryItem[]>([])
 const warnings = ref<InventoryItem[]>([])
-const movements = ref<InventoryMovement[]>([])
 
 const totalStock = computed(() => items.value.reduce((sum, it) => sum + (Number(it.onlineStock) || 0), 0))
 
@@ -141,23 +113,16 @@ const buckets = computed(() => {
   }))
 })
 
-function formatTime(value: any) {
-  if (!value) return '-'
-  return String(value).replace('T', ' ').slice(0, 19)
-}
-
 async function reload() {
   loading.value = true
   error.value = ''
   try {
-    const [itemsRes, warningsRes, movementsRes] = await Promise.all([
+    const [itemsRes, warningsRes] = await Promise.all([
       fetchInventoryItems(),
-      fetchInventoryWarnings(),
-      fetchInventoryMovements()
+      fetchInventoryWarnings()
     ])
     items.value = itemsRes || []
     warnings.value = warningsRes || []
-    movements.value = (movementsRes || []).slice(0, 20)
   } catch (e: any) {
     error.value = e?.response?.data?.message || '加载失败'
   } finally {
@@ -191,6 +156,10 @@ onMounted(reload)
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 10px;
+}
+
+.stats-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .section-actions {
@@ -255,11 +224,6 @@ onMounted(reload)
   grid-template-columns: 1.4fr 0.6fr 0.8fr;
   gap: 10px;
   align-items: center;
-}
-
-.movements .thead,
-.movements .trow {
-  grid-template-columns: 1fr 0.6fr 0.8fr 0.6fr 1.2fr;
 }
 
 .thead {

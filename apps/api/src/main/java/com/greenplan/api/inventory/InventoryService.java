@@ -10,9 +10,11 @@ import com.greenplan.api.security.JwtUserPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class InventoryService {
@@ -125,5 +127,76 @@ public class InventoryService {
         item.setOnlineStock(0);
         item.setWarningThreshold(DEFAULT_WARNING_THRESHOLD);
         return inventoryItemRepository.save(item);
+    }
+
+    public InventoryAnalyticsDto analytics() {
+        LocalDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        LocalDateTime thirtyDaysAgo = LocalDate.now().minusDays(29).atStartOfDay();
+
+        List<InventoryMovement> monthMovements = movementRepository.findByCreatedAtGreaterThanEqual(monthStart);
+        List<InventoryMovement> thirtyDayMovements = movementRepository.findByCreatedAtGreaterThanEqual(thirtyDaysAgo);
+
+        Map<Long, Product> productMap = productRepository.findAll().stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
+        // outbound by product (this month)
+        Map<Long, Integer> outboundQtyByProduct = new HashMap<>();
+        for (InventoryMovement m : monthMovements) {
+            if ("OUTBOUND".equals(m.getType()) || "SALE_DEDUCT".equals(m.getType())) {
+                outboundQtyByProduct.merge(m.getProductId(), Math.abs(m.getQuantity()), Integer::sum);
+            }
+        }
+
+        List<InventoryAnalyticsDto.ProductOutboundStat> outboundByProduct = outboundQtyByProduct.entrySet().stream()
+                .sorted(Map.Entry.<Long, Integer>comparingByValue().reversed())
+                .map(e -> {
+                    Product p = productMap.get(e.getKey());
+                    return new InventoryAnalyticsDto.ProductOutboundStat(
+                            e.getKey(),
+                            p != null ? p.getSku() : null,
+                            p != null ? p.getName() : "商品#" + e.getKey(),
+                            e.getValue()
+                    );
+                })
+                .toList();
+
+        // totals
+        int inboundTotal = monthMovements.stream()
+                .filter(m -> "INBOUND".equals(m.getType()))
+                .mapToInt(InventoryMovement::getQuantity)
+                .sum();
+        int outboundTotal = monthMovements.stream()
+                .filter(m -> "OUTBOUND".equals(m.getType()) || "SALE_DEDUCT".equals(m.getType()))
+                .mapToInt(m -> Math.abs(m.getQuantity()))
+                .sum();
+
+        int currentTotalStock = inventoryItemRepository.findAll().stream()
+                .mapToInt(InventoryItem::getOnlineStock)
+                .sum();
+
+        // daily trend (last 30 days)
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM-dd");
+        Map<String, int[]> trendMap = new LinkedHashMap<>();
+        for (int i = 29; i >= 0; i--) {
+            String key = LocalDate.now().minusDays(i).format(fmt);
+            trendMap.put(key, new int[]{0, 0}); // [inbound, outbound]
+        }
+
+        for (InventoryMovement m : thirtyDayMovements) {
+            String key = m.getCreatedAt().toLocalDate().format(fmt);
+            int[] arr = trendMap.get(key);
+            if (arr == null) continue;
+            if ("INBOUND".equals(m.getType())) {
+                arr[0] += m.getQuantity();
+            } else if ("OUTBOUND".equals(m.getType()) || "SALE_DEDUCT".equals(m.getType())) {
+                arr[1] += Math.abs(m.getQuantity());
+            }
+        }
+
+        List<InventoryAnalyticsDto.DailyTrend> dailyTrend = trendMap.entrySet().stream()
+                .map(e -> new InventoryAnalyticsDto.DailyTrend(e.getKey(), e.getValue()[0], e.getValue()[1]))
+                .toList();
+
+        return new InventoryAnalyticsDto(outboundByProduct, dailyTrend, inboundTotal, outboundTotal, currentTotalStock);
     }
 }

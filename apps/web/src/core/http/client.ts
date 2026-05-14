@@ -25,13 +25,18 @@ http.interceptors.response.use(
   },
   (err) => {
     const status = err.response?.status
+    const message = err.response?.data?.message || ''
     if (status === 401) {
       const store = useAuthStore()
       const hadToken = !!store.accessToken
       store.logout()
       if (hadToken && typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        alert(message || '登录已过期，请重新登录')
         window.location.assign('/login')
       }
+    }
+    if (status === 403) {
+      alert(message || '权限不足，无法访问该资源')
     }
     return Promise.reject(err)
   }

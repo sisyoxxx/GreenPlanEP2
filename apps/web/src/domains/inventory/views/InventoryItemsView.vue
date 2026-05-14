@@ -1,9 +1,7 @@
 <template>
-  <InventoryLayout title="商品库存" subtitle="查看商品名称、在线库存和预警阈值">
+  <InventoryLayout title="库存管理" subtitle="查看商品名称、在线库存和预警阈值">
     <template #actions>
       <button class="secondary-btn" @click="reload" :disabled="loading">{{ loading ? '加载中...' : '刷新' }}</button>
-      <RouterLink class="text-link" to="/inventory/inbound">去入库 →</RouterLink>
-      <RouterLink class="text-link" to="/inventory/warnings">去预警设置 →</RouterLink>
     </template>
 
     <section class="page-lite">
@@ -64,13 +62,12 @@
       <p v-if="message" class="home-message">{{ message }}</p>
     </section>
 
-    <section v-if="activeInbound" class="page-lite form-panel">
-      <h2 class="section-title">快速入库 · {{ activeInbound.name }}</h2>
+    <BaseModal :open="!!activeInbound" :title="activeInbound ? `快速入库 · ${activeInbound.name}` : ''" @close="closeInbound">
       <form class="form-shell" @submit.prevent="submitInbound">
         <div class="grid grid-2">
           <label class="field">
             <span class="field-label">商品 ID</span>
-            <input :value="activeInbound.productId" disabled />
+            <input :value="activeInbound?.productId" disabled />
           </label>
           <label class="field">
             <span class="field-label">入库数量</span>
@@ -81,38 +78,38 @@
           <span class="field-label">备注</span>
           <input v-model="inboundForm.note" placeholder="例如: 采购入库 / 盘点调整" />
         </label>
-        <div class="row-actions">
-          <button type="button" class="secondary-btn" @click="closeInbound">取消</button>
-          <button type="submit" :disabled="submitting">{{ submitting ? '提交中...' : '确认入库' }}</button>
-        </div>
       </form>
-    </section>
+      <template #footer>
+        <button type="button" class="secondary-btn" @click="closeInbound">取消</button>
+        <button type="button" :disabled="submitting" @click="submitInbound">{{ submitting ? '提交中...' : '确认入库' }}</button>
+      </template>
+    </BaseModal>
 
-    <section v-if="activeThreshold" class="page-lite form-panel">
-      <h2 class="section-title">设置预警 · {{ activeThreshold.name }}</h2>
+    <BaseModal :open="!!activeThreshold" :title="activeThreshold ? `设置预警 · ${activeThreshold.name}` : ''" @close="closeThreshold">
       <form class="form-shell" @submit.prevent="submitThreshold">
         <div class="grid grid-2">
           <label class="field">
             <span class="field-label">商品 ID</span>
-            <input :value="activeThreshold.productId" disabled />
+            <input :value="activeThreshold?.productId" disabled />
           </label>
           <label class="field">
             <span class="field-label">预警阈值</span>
             <input v-model.number="thresholdForm.warningThreshold" type="number" min="0" required />
           </label>
         </div>
-        <div class="row-actions">
-          <button type="button" class="secondary-btn" @click="closeThreshold">取消</button>
-          <button type="submit" :disabled="submitting">{{ submitting ? '提交中...' : '保存' }}</button>
-        </div>
       </form>
-    </section>
+      <template #footer>
+        <button type="button" class="secondary-btn" @click="closeThreshold">取消</button>
+        <button type="button" :disabled="submitting" @click="submitThreshold">{{ submitting ? '提交中...' : '保存' }}</button>
+      </template>
+    </BaseModal>
   </InventoryLayout>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import InventoryLayout from '../components/InventoryLayout.vue'
+import BaseModal from '../../../shared/components/BaseModal.vue'
 import { fetchInventoryItems, inboundStock, updateWarningThreshold } from '../api'
 
 type InventoryRow = {
@@ -242,6 +239,11 @@ onMounted(reload)
   justify-content: space-between;
   gap: 14px;
   margin-bottom: 14px;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 10;
+  padding: 8px 0;
 }
 
 .section-title {
@@ -363,27 +365,6 @@ onMounted(reload)
 
 .error-tip {
   margin-top: 6px;
-}
-
-.form-panel {
-  display: grid;
-  gap: 12px;
-}
-
-.field {
-  display: grid;
-  gap: 6px;
-}
-
-.field-label {
-  font-size: 13px;
-  color: #4b5563;
-}
-
-.row-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
 }
 
 @media (max-width: 720px) {
